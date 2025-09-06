@@ -1,0 +1,110 @@
+.reports {
+  padding: 1rem 2rem;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #111827;
+}
+
+.reports h1 {
+  font-weight: 700;
+  font-size: 1.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.reports p {
+  color: #6b7280;
+  margin-bottom: 1.5rem;
+}
+
+.table-section {
+  background: #fff;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  margin-bottom: 2rem;
+}
+
+.table-section h2 {
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+th, td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+th {
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
+
+.green {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.red {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.summary-stats {
+  display: flex;
+  gap: 1rem;
+}
+
+.stat {
+  flex: 1;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  color: #111827;
+  font-weight: 700;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.stat-label {
+  font-weight: 600;
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+}
+
+.stat-subtext {
+  font-weight: 400;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.blue {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.green {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.red {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.purple {
+  background: #ede9fe;
+  color: #7c3aed;
+}
