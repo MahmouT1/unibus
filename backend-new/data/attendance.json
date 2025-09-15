@@ -1,0 +1,346 @@
+[
+  {
+    "_id": "attendance-1757360252155",
+    "studentId": "student-user-id",
+    "studentName": "محمد طارق عبد المنعم",
+    "studentEmail": "m.raaaay2@gmail.com",
+    "studentPhone": "01085697436",
+    "studentCollege": "بدر",
+    "studentGrade": "fourth-year",
+    "studentMajor": "علاج طبيعي",
+    "studentAddress": {
+      "streetAddress": "Not provided",
+      "buildingNumber": "",
+      "fullAddress": "Not provided"
+    },
+    "date": "2025-09-08T19:37:32.155Z",
+    "status": "Present",
+    "checkInTime": "2025-09-08T19:37:32.155Z",
+    "appointmentSlot": "first",
+    "station": {
+      "name": "Main Station",
+      "location": "Campus Entrance",
+      "coordinates": "30.0444,31.2357"
+    },
+    "qrScanned": true,
+    "supervisorId": "admin-user-id",
+    "supervisorName": "Supervisor",
+    "qrData": {
+      "id": "student-user-id",
+      "fullName": "محمد طارق عبد المنعم",
+      "email": "m.raaaay2@gmail.com",
+      "phoneNumber": "01085697436",
+      "college": "بدر",
+      "grade": "fourth-year",
+      "major": "علاج طبيعي",
+      "address": {
+        "streetAddress": "Not provided",
+        "buildingNumber": "",
+        "fullAddress": "Not provided"
+      }
+    },
+    "verified": true,
+    "createdAt": "2025-09-08T19:37:32.155Z"
+  },
+  {
+    "_id": "attendance-1757360282736",
+    "studentId": "student-user-id",
+    "studentName": "محمود طارق ",
+    "studentEmail": "mahmoudtarekmonaim@gmail.com",
+    "studentPhone": "01025713978",
+    "studentCollege": "الشروق",
+    "studentGrade": "third-year",
+    "studentMajor": "نظم",
+    "studentAddress": {
+      "streetAddress": "suez/egypt",
+      "buildingNumber": "",
+      "fullAddress": "suez/egypt"
+    },
+    "date": "2025-09-08T19:38:02.736Z",
+    "status": "Present",
+    "checkInTime": "2025-09-08T19:38:02.736Z",
+    "appointmentSlot": "first",
+    "station": {
+      "name": "Main Station",
+      "location": "Campus Entrance",
+      "coordinates": "30.0444,31.2357"
+    },
+    "qrScanned": true,
+    "supervisorId": "admin-user-id",
+    "supervisorName": "Supervisor",
+    "qrData": {
+      "id": "student-user-id",
+      "fullName": "محمود طارق ",
+      "email": "mahmoudtarekmonaim@gmail.com",
+      "phoneNumber": "01025713978",
+      "college": "الشروق",
+      "grade": "third-year",
+      "major": "نظم",
+      "address": {
+        "streetAddress": "suez/egypt",
+        "buildingNumber": "",
+        "fullAddress": "suez/egypt"
+      }
+    },
+    "verified": true,
+    "createdAt": "2025-09-08T19:38:02.736Z"
+  },
+  {
+    "_id": "attendance-1757360310157",
+    "studentId": "student-1757350505410",
+    "studentName": "علي شريف محمد",
+    "studentEmail": "Alishrifloza@gmail.com",
+    "studentPhone": "01111227555",
+    "studentCollege": "تجاره",
+    "studentGrade": "second-year",
+    "studentMajor": "حاسبات ",
+    "studentAddress": {
+      "streetAddress": "Not provided",
+      "buildingNumber": "",
+      "fullAddress": "Not provided"
+    },
+    "date": "2025-09-08T19:38:30.157Z",
+    "status": "Present",
+    "checkInTime": "2025-09-08T19:38:30.157Z",
+    "appointmentSlot": "first",
+    "station": {
+      "name": "Main Station",
+      "location": "Campus Entrance",
+      "coordinates": "30.0444,31.2357"
+    },
+    "qrScanned": true,
+    "supervisorId": "admin-user-id",
+    "supervisorName": "Supervisor",
+    "qrData": {
+      "id": "student-1757350505410",
+      "fullName": "علي شريف محمد",
+      "email": "Alishrifloza@gmail.com",
+      "phoneNumber": "01111227555",
+      "college": "تجاره",
+      "grade": "second-year",
+      "major": "حاسبات ",
+      "address": {
+        "streetAddress": "Not provided",
+        "buildingNumber": "",
+        "fullAddress": "Not provided"
+      }
+    },
+    "verified": true,
+    "createdAt": "2025-09-08T19:38:30.157Z"
+  },
+  {
+    "_id": "attendance-1757434979762",
+    "studentId": "student-user-id",
+    "studentName": "محمد طارق عبد المنعم",
+    "studentEmail": "m.raaaay2@gmail.com",
+    "studentPhone": "01085697436",
+    "studentCollege": "بدر",
+    "studentGrade": "fourth-year",
+    "studentMajor": "علاج طبيعي",
+    "studentAddress": {
+      "streetAddress": "Not provided",
+      "buildingNumber": "",
+      "fullAddress": "Not provided"
+    },
+    "date": "2025-09-09T16:22:59.762Z",
+    "status": "Present",
+    "checkInTime": "2025-09-09T16:22:59.762Z",
+    "appointmentSlot": "first",
+    "station": {
+      "name": "Main Station",
+      "location": "Campus Entrance",
+      "coordinates": "30.0444,31.2357"
+    },
+    "qrScanned": true,
+    "supervisorId": "admin-user-id",
+    "supervisorName": "Supervisor",
+    "qrData": {
+      "id": "student-user-id",
+      "fullName": "محمد طارق عبد المنعم",
+      "email": "m.raaaay2@gmail.com",
+      "phoneNumber": "01085697436",
+      "college": "بدر",
+      "grade": "fourth-year",
+      "major": "علاج طبيعي",
+      "address": {
+        "streetAddress": "Not provided",
+        "buildingNumber": "",
+        "fullAddress": "Not provided"
+      }
+    },
+    "verified": true,
+    "createdAt": "2025-09-09T16:22:59.762Z"
+  },
+  {
+    "_id": "attendance-1757435502404",
+    "studentId": "student-user-id",
+    "studentName": "محمود طارق ",
+    "studentEmail": "mahmoudtarekmonaim@gmail.com",
+    "studentPhone": "01025713978",
+    "studentCollege": "الشروق",
+    "studentGrade": "third-year",
+    "studentMajor": "نظم",
+    "studentAddress": {
+      "streetAddress": "suez/egypt",
+      "buildingNumber": "",
+      "fullAddress": "suez/egypt"
+    },
+    "date": "2025-09-09T16:31:42.404Z",
+    "status": "Present",
+    "checkInTime": "2025-09-09T16:31:42.404Z",
+    "appointmentSlot": "first",
+    "station": {
+      "name": "Main Station",
+      "location": "Campus Entrance",
+      "coordinates": "30.0444,31.2357"
+    },
+    "qrScanned": true,
+    "supervisorId": "admin-user-id",
+    "supervisorName": "Supervisor",
+    "qrData": {
+      "id": "student-user-id",
+      "fullName": "محمود طارق ",
+      "email": "mahmoudtarekmonaim@gmail.com",
+      "phoneNumber": "01025713978",
+      "college": "الشروق",
+      "grade": "third-year",
+      "major": "نظم",
+      "address": {
+        "streetAddress": "suez/egypt",
+        "buildingNumber": "",
+        "fullAddress": "suez/egypt"
+      }
+    },
+    "verified": true,
+    "createdAt": "2025-09-09T16:31:42.404Z"
+  },
+  {
+    "_id": "attendance-1757465237403",
+    "studentId": "68c0c91435ac9cb3f9647b20",
+    "studentName": "مازن محسن احمد",
+    "studentEmail": "mazenmohsen@gmail.com",
+    "studentPhone": "01055987624",
+    "studentCollege": "الشروق",
+    "studentGrade": "fourth-year",
+    "studentMajor": "نظم",
+    "studentAddress": {
+      "streetAddress": "Not provided",
+      "buildingNumber": "",
+      "fullAddress": "Not provided"
+    },
+    "date": "2025-09-10T00:47:17.403Z",
+    "status": "Present",
+    "checkInTime": "2025-09-10T00:47:17.403Z",
+    "appointmentSlot": "first",
+    "station": {
+      "name": "Main Station",
+      "location": "Campus Entrance",
+      "coordinates": "30.0444,31.2357"
+    },
+    "qrScanned": true,
+    "supervisorId": "68c0be6835ac9cb3f9647b1b",
+    "supervisorName": "Supervisor",
+    "qrData": {
+      "id": "68c0c91435ac9cb3f9647b20",
+      "fullName": "مازن محسن احمد",
+      "email": "mazenmohsen@gmail.com",
+      "phoneNumber": "01055987624",
+      "college": "الشروق",
+      "grade": "fourth-year",
+      "major": "نظم",
+      "address": {
+        "streetAddress": "Not provided",
+        "buildingNumber": "",
+        "fullAddress": "Not provided"
+      }
+    },
+    "verified": true,
+    "createdAt": "2025-09-10T00:47:17.403Z"
+  },
+  {
+    "_id": "attendance-1757560770362",
+    "studentId": "68c0c91435ac9cb3f9647b20",
+    "studentName": "مازن محسن احمد",
+    "studentEmail": "mazenmohsen@gmail.com",
+    "studentPhone": "01055987624",
+    "studentCollege": "الشروق",
+    "studentGrade": "fourth-year",
+    "studentMajor": "نظم",
+    "studentAddress": {
+      "streetAddress": "Not provided",
+      "buildingNumber": "",
+      "fullAddress": "Not provided"
+    },
+    "date": "2025-09-11T03:19:30.362Z",
+    "status": "Present",
+    "checkInTime": "2025-09-11T03:19:30.362Z",
+    "appointmentSlot": "first",
+    "station": {
+      "name": "Main Station",
+      "location": "Campus Entrance",
+      "coordinates": "30.0444,31.2357"
+    },
+    "qrScanned": true,
+    "supervisorId": "68c2396ea281c73ca63b8f32",
+    "supervisorName": "Supervisor",
+    "qrData": {
+      "id": "68c0c91435ac9cb3f9647b20",
+      "fullName": "مازن محسن احمد",
+      "email": "mazenmohsen@gmail.com",
+      "phoneNumber": "01055987624",
+      "college": "الشروق",
+      "grade": "fourth-year",
+      "major": "نظم",
+      "address": {
+        "streetAddress": "Not provided",
+        "buildingNumber": "",
+        "fullAddress": "Not provided"
+      }
+    },
+    "verified": true,
+    "createdAt": "2025-09-11T03:19:30.362Z"
+  },
+  {
+    "_id": "attendance-1757561729870",
+    "studentId": "student-user-id",
+    "studentName": "محمد طارق عبد المنعم",
+    "studentEmail": "m.raaaay2@gmail.com",
+    "studentPhone": "01085697436",
+    "studentCollege": "بدر",
+    "studentGrade": "fourth-year",
+    "studentMajor": "علاج طبيعي",
+    "studentAddress": {
+      "streetAddress": "Not provided",
+      "buildingNumber": "",
+      "fullAddress": "Not provided"
+    },
+    "date": "2025-09-11T03:35:29.870Z",
+    "status": "Present",
+    "checkInTime": "2025-09-11T03:35:29.870Z",
+    "appointmentSlot": "first",
+    "station": {
+      "name": "Main Station",
+      "location": "Campus Entrance",
+      "coordinates": "30.0444,31.2357"
+    },
+    "qrScanned": true,
+    "supervisorId": "68c2396ea281c73ca63b8f32",
+    "supervisorName": "Supervisor",
+    "qrData": {
+      "id": "student-user-id",
+      "fullName": "محمد طارق عبد المنعم",
+      "email": "m.raaaay2@gmail.com",
+      "phoneNumber": "01085697436",
+      "college": "بدر",
+      "grade": "fourth-year",
+      "major": "علاج طبيعي",
+      "address": {
+        "streetAddress": "Not provided",
+        "buildingNumber": "",
+        "fullAddress": "Not provided"
+      }
+    },
+    "verified": true,
+    "createdAt": "2025-09-11T03:35:29.870Z"
+  }
+]

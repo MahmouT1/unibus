@@ -1,0 +1,30 @@
+[
+  {
+    "id": "ticket_1757430636830_8z9fn492z",
+    "email": "test@example.com",
+    "category": "Technical Issue",
+    "priority": "high",
+    "subject": "Test Support Ticket",
+    "description": "This is a test support ticket to verify the system is working correctly.",
+    "status": "open",
+    "createdAt": "2025-09-09T15:10:36.830Z",
+    "updatedAt": "2025-09-09T15:10:36.830Z",
+    "adminNotes": "",
+    "assignedTo": "",
+    "resolution": ""
+  },
+  {
+    "id": "ticket_1757431036065_1x2vgkzy1",
+    "email": "m.raaaay2@gmail.com",
+    "category": "technical",
+    "priority": "medium",
+    "subject": "problem in my Account",
+    "description": "my problem is Account become not working in login page and i can't show my portal",
+    "status": "open",
+    "createdAt": "2025-09-09T15:17:16.065Z",
+    "updatedAt": "2025-09-09T15:17:16.065Z",
+    "adminNotes": "",
+    "assignedTo": "",
+    "resolution": ""
+  }
+]

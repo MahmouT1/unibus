@@ -1,0 +1,88 @@
+{
+  "ahmedtarek@gmail.com": {
+    "id": "student-1757350299648",
+    "fullName": "Ahmed Tarek",
+    "studentId": "Not assigned",
+    "phoneNumber": "123-456-7890",
+    "college": "Engineering",
+    "grade": "second-year",
+    "major": "Computer Science",
+    "address": {
+      "streetAddress": "123 Main St",
+      "buildingNumber": "Apt 101",
+      "fullAddress": "Cairo, Egypt"
+    },
+    "profilePhoto": null,
+    "academicYear": "2024-2025",
+    "email": "ahmedtarek@gmail.com",
+    "updatedAt": "2025-09-08T16:51:39.683Z"
+  },
+  "Alishrifloza@gmail.com": {
+    "id": "student-1757350546025",
+    "fullName": "Ahmed Tarek",
+    "studentId": "Not assigned",
+    "phoneNumber": "123-456-7890",
+    "college": "Engineering",
+    "grade": "second-year",
+    "major": "Computer Science",
+    "address": {
+      "streetAddress": "123 Main St",
+      "buildingNumber": "Apt 101",
+      "fullAddress": "Cairo, Egypt"
+    },
+    "profilePhoto": null,
+    "academicYear": "2024-2025",
+    "email": "Alishrifloza@gmail.com",
+    "updatedAt": "2025-09-08T16:55:46.068Z"
+  },
+  "mahmoudtarekmonaim@gmail.com": {
+    "_id": "student-1757355782500",
+    "userId": "user-1757355782500",
+    "studentId": "STU2024001",
+    "fullName": "محمود طارق ",
+    "phoneNumber": "01025713978",
+    "college": "الشروق",
+    "grade": "third-year",
+    "major": "نظم",
+    "academicYear": "2024-2025",
+    "address": {
+      "streetAddress": "suez/egypt",
+      "buildingNumber": "",
+      "fullAddress": "suez/egypt"
+    },
+    "profilePhoto": null,
+    "qrCode": null,
+    "attendanceStats": {
+      "daysRegistered": 0,
+      "remainingDays": 180,
+      "attendanceRate": 0
+    },
+    "status": "Active",
+    "lastUpdated": "2025-09-08T18:25:39.613Z"
+  },
+  "m.raaaay2@gmail.com": {
+    "_id": "student-1757357976423",
+    "userId": "user-1757357976423",
+    "studentId": "Not assigned",
+    "fullName": "محمد طارق عبد المنعم",
+    "phoneNumber": "01085697436",
+    "college": "بدر",
+    "grade": "fourth-year",
+    "major": "علاج طبيعي",
+    "academicYear": "2024-2025",
+    "address": {
+      "streetAddress": "Not provided",
+      "buildingNumber": "",
+      "fullAddress": "Not provided"
+    },
+    "profilePhoto": null,
+    "qrCode": null,
+    "attendanceStats": {
+      "daysRegistered": 0,
+      "remainingDays": 180,
+      "attendanceRate": 0
+    },
+    "status": "Active",
+    "lastUpdated": "2025-09-08T18:59:36.423Z"
+  }
+}
