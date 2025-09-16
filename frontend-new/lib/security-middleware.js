@@ -1,7 +1,6 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
-import { secureLog, secureError, secureWarn, secureInfo, SECURITY_CONFIG } from './secure-logging.js';
 
 // Security configuration
 const SECURITY_CONFIG = {
@@ -42,8 +41,8 @@ export function generateSecureToken(payload) {
     expiresIn: SECURITY_CONFIG.JWT_EXPIRES_IN
   });
   
-  // Log token generation securely
-  secureInfo('JWT token generated', {
+  // Log token generation securely (using console.info for now)
+  console.info('JWT token generated', {
     userId: payload.id,
     role: payload.role,
     expiresIn: SECURITY_CONFIG.JWT_EXPIRES_IN
@@ -63,12 +62,12 @@ export function verifySecureToken(token) {
     
     // Check token expiration
     if (decoded.exp < Math.floor(Date.now() / 1000)) {
-      secureWarn('JWT token expired', { tokenId: decoded.jti });
+      console.warn('JWT token expired', { tokenId: decoded.jti });
       return { valid: false, error: 'Token expired' };
     }
     
     // Log successful token verification
-    secureInfo('JWT token verified', {
+    console.info('JWT token verified', {
       userId: decoded.id,
       role: decoded.role,
       tokenId: decoded.jti
@@ -76,7 +75,7 @@ export function verifySecureToken(token) {
     
     return { valid: true, payload: decoded };
   } catch (error) {
-    secureError('JWT token verification failed', error);
+    console.error('JWT token verification failed', error);
     return { valid: false, error: error.message };
   }
 }

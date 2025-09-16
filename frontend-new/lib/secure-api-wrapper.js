@@ -8,7 +8,6 @@ import {
   getSecurityHeaders,
   corsMiddleware
 } from './security-middleware.js';
-import { secureLog, secureError, secureWarn, secureInfo, secureApiLog } from './secure-logging.js';
 import { 
   validateRegistrationData,
   validateLoginData,
@@ -60,7 +59,7 @@ export function withAuth(handler, options = {}) {
       return authResult;
       
     } catch (error) {
-      secureError('Auth wrapper error', error);
+      console.error('Auth wrapper error', error);
       const errorResponse = NextResponse.json({
         success: false,
         message: 'Authentication error',
