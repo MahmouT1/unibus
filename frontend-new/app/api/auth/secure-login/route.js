@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { withLoginValidation, withBasicSecurity } from '@/lib/secure-api-wrapper.js';
-import { hashPassword, verifyPassword, generateSecureToken, trackLoginAttempt } from '@/lib/security-middleware.js';
+import { hashPassword, verifyPassword, generateSecureToken, trackLoginAttempt, getSecurityHeaders } from '@/lib/security-middleware.js';
 import { getSecureDatabase } from '@/lib/secure-database.js';
 import { logSecurityEvent, SECURITY_EVENTS, SECURITY_LEVELS } from '@/lib/security-monitoring.js';
 
@@ -135,8 +135,8 @@ export const POST = withLoginValidation(async (request) => {
       role: user.role
     }, SECURITY_LEVELS.LOW);
     
-    // Return success response
-    return NextResponse.json({
+    // Return success response with security headers
+    const response = NextResponse.json({
       success: true,
       message: 'Login successful',
       token,
@@ -150,6 +150,14 @@ export const POST = withLoginValidation(async (request) => {
       }
     });
     
+    // Add security headers
+    const securityHeaders = getSecurityHeaders();
+    Object.entries(securityHeaders).forEach(([key, value]) => {
+      response.headers.set(key, value);
+    });
+    
+    return response;
+    
   } catch (error) {
     console.error('Secure login error:', error);
     
@@ -160,9 +168,17 @@ export const POST = withLoginValidation(async (request) => {
       userAgent: request.headers.get('user-agent') || 'unknown'
     }, SECURITY_LEVELS.HIGH);
     
-    return NextResponse.json({
+    const errorResponse = NextResponse.json({
       success: false,
       message: 'Login failed due to system error'
     }, { status: 500 });
+    
+    // Add security headers to error response
+    const securityHeaders = getSecurityHeaders();
+    Object.entries(securityHeaders).forEach(([key, value]) => {
+      errorResponse.headers.set(key, value);
+    });
+    
+    return errorResponse;
   }
 });

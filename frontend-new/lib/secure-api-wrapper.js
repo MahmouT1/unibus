@@ -5,6 +5,7 @@ import {
   rateLimitMiddleware,
   requestSizeLimitMiddleware,
   securityHeadersMiddleware,
+  getSecurityHeaders,
   corsMiddleware
 } from './security-middleware.js';
 import { 
@@ -28,12 +29,6 @@ import {
 export function withAuth(handler, options = {}) {
   return async (request) => {
     try {
-      // Apply security headers
-      securityHeadersMiddleware(request, null);
-      
-      // Apply CORS
-      corsMiddleware(request, null);
-      
       // Apply rate limiting
       if (options.rateLimit) {
         const rateLimitResult = rateLimitMiddleware('api', options.rateLimit)(request, null);
@@ -52,15 +47,32 @@ export function withAuth(handler, options = {}) {
       
       // Apply authentication
       const authResult = await requireAuth(handler)(request, null);
+      
+      // Add security headers to response
+      if (authResult && authResult.headers) {
+        const securityHeaders = getSecurityHeaders();
+        Object.entries(securityHeaders).forEach(([key, value]) => {
+          authResult.headers.set(key, value);
+        });
+      }
+      
       return authResult;
       
     } catch (error) {
       console.error('Auth wrapper error:', error);
-      return NextResponse.json({
+      const errorResponse = NextResponse.json({
         success: false,
         message: 'Authentication error',
         error: error.message
       }, { status: 500 });
+      
+      // Add security headers to error response
+      const securityHeaders = getSecurityHeaders();
+      Object.entries(securityHeaders).forEach(([key, value]) => {
+        errorResponse.headers.set(key, value);
+      });
+      
+      return errorResponse;
     }
   };
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { securityHeadersMiddleware, corsMiddleware, rateLimitMiddleware } from './lib/security-middleware.js';
+import { getSecurityHeaders } from './lib/security-middleware.js';
 
 /**
  * Next.js middleware for security and protection
@@ -13,42 +13,10 @@ export function middleware(request) {
   const response = NextResponse.next();
   
   // Apply security headers to all responses
-  securityHeadersMiddleware(request, response);
-  
-  // Apply CORS configuration
-  corsMiddleware(request, response);
-  
-  // Rate limiting for API routes
-  if (pathname.startsWith('/api/')) {
-    const rateLimitResult = rateLimitMiddleware('api', 100)(request, response);
-    if (rateLimitResult) {
-      return rateLimitResult;
-    }
-  }
-  
-  // Special rate limiting for authentication endpoints
-  if (pathname.startsWith('/api/auth/')) {
-    const rateLimitResult = rateLimitMiddleware('auth', 10)(request, response);
-    if (rateLimitResult) {
-      return rateLimitResult;
-    }
-  }
-  
-  // Rate limiting for attendance endpoints
-  if (pathname.startsWith('/api/attendance/')) {
-    const rateLimitResult = rateLimitMiddleware('attendance', 20)(request, response);
-    if (rateLimitResult) {
-      return rateLimitResult;
-    }
-  }
-  
-  // Rate limiting for admin endpoints
-  if (pathname.startsWith('/api/admin/')) {
-    const rateLimitResult = rateLimitMiddleware('admin', 50)(request, response);
-    if (rateLimitResult) {
-      return rateLimitResult;
-    }
-  }
+  const securityHeaders = getSecurityHeaders();
+  Object.entries(securityHeaders).forEach(([key, value]) => {
+    response.headers.set(key, value);
+  });
   
   // Block access to sensitive files
   if (pathname.includes('/.env') || 
