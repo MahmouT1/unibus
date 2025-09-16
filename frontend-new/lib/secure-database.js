@@ -1,5 +1,6 @@
 import { MongoClient } from 'mongodb';
 import crypto from 'crypto';
+import { secureLog, secureError, secureWarn, secureInfo, secureDbLog } from './secure-logging.js';
 
 /**
  * Enhanced secure database connection with encryption and security features
@@ -82,11 +83,11 @@ export async function createSecureConnection() {
     // Create security indexes
     await createSecurityIndexes(db);
     
-    console.log('✅ Secure database connection established');
+    secureInfo('Secure database connection established', { dbName });
     return { client, db };
     
   } catch (error) {
-    console.error('❌ Database connection failed:', error);
+    secureError('Database connection failed', error);
     throw error;
   }
 }
