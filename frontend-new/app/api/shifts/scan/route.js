@@ -91,23 +91,61 @@ export async function POST(request) {
       }, { status: 404 });
     }
 
-    // Check if student already scanned in THIS SPECIFIC SHIFT (not just today)
-    const existingRecord = shift.attendanceRecords.find(record => {
-      return record.studentEmail === studentData.email;
-    });
+    // CRITICAL: Check if student already scanned in ANY shift today (not just this shift)
+    const today = new Date();
+    const startOfDay = new Date(today);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(today);
+    endOfDay.setHours(23, 59, 59, 999);
 
-    if (existingRecord) {
-      console.log('Student already scanned in this shift:', {
+    // Check all shifts for today to see if student was already scanned
+    const allTodayShifts = await shiftsCollection.find({
+      date: {
+        $gte: startOfDay,
+        $lte: endOfDay
+      },
+      status: 'open'
+    }).toArray();
+
+    let existingRecord = null;
+    let existingShift = null;
+
+    // Check if student was already scanned in any shift today
+    for (const todayShift of allTodayShifts) {
+      const record = todayShift.attendanceRecords.find(record => {
+        return record.studentEmail === studentData.email;
+      });
+      
+      if (record) {
+        existingRecord = record;
+        existingShift = todayShift;
+        break;
+      }
+    }
+
+    if (existingRecord && existingShift) {
+      console.log('DUPLICATE ATTENDANCE DETECTED IN SHIFT SYSTEM:', {
         studentEmail: studentData.email,
+        studentName: studentData.fullName,
         existingRecord: existingRecord,
-        shiftId: shiftId
+        existingShiftId: existingShift._id.toString(),
+        existingSupervisor: existingShift.supervisorName,
+        currentShiftId: shiftId,
+        currentSupervisor: shift.supervisorName
       });
       
       return NextResponse.json({
         success: false,
-        message: `Student ${studentData.fullName} has already been scanned in this shift.`,
-        existingRecord: existingRecord
-      }, { status: 400 });
+        message: `Student ${studentData.fullName} has already been scanned by ${existingShift.supervisorName} today.`,
+        isDuplicate: true,
+        existingRecord: {
+          studentName: existingRecord.studentName,
+          supervisorName: existingShift.supervisorName,
+          scanTime: existingRecord.scanTime,
+          shiftId: existingShift._id.toString()
+        }
+      }, { status: 409 });
     }
 
     // Add attendance record
