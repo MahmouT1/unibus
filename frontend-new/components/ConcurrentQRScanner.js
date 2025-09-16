@@ -173,9 +173,20 @@ const ConcurrentQRScanner = ({
         }
       } else {
         if (result.isDuplicate) {
-          setError('Student already scanned for this slot today');
+          const duplicateMessage = result.message || 'Student already scanned for this slot today';
+          setError(`⚠️ ${duplicateMessage}`);
+          
+          // Show detailed duplicate information
+          if (result.existingAttendance) {
+            console.log('Duplicate attendance details:', {
+              studentName: result.existingAttendance.studentName,
+              supervisorName: result.existingAttendance.supervisorName,
+              checkInTime: result.existingAttendance.checkInTime,
+              appointmentSlot: result.existingAttendance.appointmentSlot
+            });
+          }
         } else {
-          setError(result.message || 'Failed to register attendance');
+          setError(`❌ ${result.message || 'Failed to register attendance'}`);
         }
         
         if (onScanError) {

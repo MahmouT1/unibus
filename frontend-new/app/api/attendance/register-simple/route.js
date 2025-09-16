@@ -59,7 +59,11 @@ export async function POST(request) {
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     const existingAttendance = await Attendance.findOne({
-      studentId: student._id,
+      $or: [
+        { studentId: student._id },
+        { studentId: sanitizedStudentData.id },
+        { 'qrData.id': sanitizedStudentData.id }
+      ],
       date: {
         $gte: today,
         $lt: tomorrow
@@ -87,9 +91,16 @@ export async function POST(request) {
       
       return NextResponse.json({
         success: false,
-        message: 'Attendance already registered for this slot today',
-        attendance: existingAttendance
-      }, { status: 400 });
+        message: `Student ${sanitizedStudentData.fullName} has already been scanned by ${existingAttendance.supervisorName || 'another supervisor'} for ${appointmentSlot || 'first'} slot today`,
+        isDuplicate: true,
+        existingAttendance: {
+          id: existingAttendance._id,
+          studentName: existingAttendance.studentName,
+          supervisorName: existingAttendance.supervisorName,
+          checkInTime: existingAttendance.checkInTime,
+          appointmentSlot: existingAttendance.appointmentSlot
+        }
+      }, { status: 409 });
     }
 
     // Create new attendance record

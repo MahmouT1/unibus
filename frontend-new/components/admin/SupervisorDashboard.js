@@ -314,7 +314,7 @@ const SupervisorDashboard = () => {
 
       console.log('Registering attendance for:', studentData.fullName);
 
-      const response = await fetch('http://localhost:3000/api/attendance/register-simple', {
+      const response = await fetch('/api/attendance/register-simple', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -341,8 +341,8 @@ const SupervisorDashboard = () => {
         // Handle different error types with user-friendly messages
         let errorMessage = 'Failed to register attendance';
         
-        if (result.message && result.message.includes('already registered')) {
-          errorMessage = `⚠️ Student ${studentData.fullName} has already registered attendance for today.\n\nThis prevents duplicate registrations.\n\nIf this is a mistake, please contact the system administrator.`;
+        if (result.isDuplicate) {
+          errorMessage = `⚠️ ${result.message}\n\nThis prevents duplicate registrations.\n\nIf this is a mistake, please contact the system administrator.`;
         } else if (result.message) {
           errorMessage = `❌ ${result.message}`;
         }

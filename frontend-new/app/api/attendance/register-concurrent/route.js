@@ -34,6 +34,60 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
+    // CRITICAL: Check for existing attendance record for this student today
+    const today = new Date();
+    const startOfDay = new Date(today);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(today);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const existingAttendance = await attendanceCollection.findOne({
+      $or: [
+        { studentId: studentId },
+        { 'qrData.id': studentId }
+      ],
+      date: {
+        $gte: startOfDay,
+        $lte: endOfDay
+      },
+      appointmentSlot: appointmentSlot || 'first'
+    });
+
+    if (existingAttendance) {
+      console.log('DUPLICATE ATTENDANCE DETECTED IN CONCURRENT SCAN:', {
+        existingRecord: {
+          id: existingAttendance._id,
+          studentId: existingAttendance.studentId,
+          studentName: existingAttendance.studentName,
+          date: existingAttendance.date,
+          slot: existingAttendance.appointmentSlot,
+          supervisorId: existingAttendance.supervisorId,
+          supervisorName: existingAttendance.supervisorName
+        },
+        newRequest: {
+          studentId: studentId,
+          studentName: studentData.fullName,
+          slot: appointmentSlot,
+          supervisorId: supervisorId,
+          supervisorName: supervisorName
+        }
+      });
+
+      return NextResponse.json({
+        success: false,
+        message: `Student ${studentData.fullName} has already been scanned by ${existingAttendance.supervisorName || 'another supervisor'} for ${appointmentSlot || 'first'} slot today`,
+        isDuplicate: true,
+        existingAttendance: {
+          id: existingAttendance._id,
+          studentName: existingAttendance.studentName,
+          supervisorName: existingAttendance.supervisorName,
+          checkInTime: existingAttendance.checkInTime,
+          appointmentSlot: existingAttendance.appointmentSlot
+        }
+      }, { status: 409 });
+    }
+
     // Create attendance record with atomic operation
     const attendanceRecord = {
       studentId: studentId,
@@ -62,7 +116,7 @@ export async function POST(request) {
       concurrentScanId: `scan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     };
 
-    // Use upsert with unique constraint to prevent duplicates
+    // Insert the attendance record
     const result = await attendanceCollection.insertOne(attendanceRecord);
 
     if (result.insertedId) {
