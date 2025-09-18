@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/mongodb-working.js';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import { getDatabase } from '@/lib/simple-db.js';
 
 export async function POST(request) {
   try {
-    const { email, password, role } = await request.json();
+    const body = await request.json();
+    const { email, password, role } = body;
     
-    console.log('Login attempt:', { email, role });
+    console.log('🔍 Login attempt:', { email, role, password });
     
     if (!email || !password || !role) {
       return NextResponse.json({
@@ -16,95 +15,55 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
+    // Connect to database
     const db = await getDatabase();
+    console.log('📡 Database connected');
     
-    // Search for user in multiple collections
-    let user = null;
-    
-    // Search in users collection
-    user = await db.collection('users').findOne({
+    // Search for user
+    const user = await db.collection('users').findOne({
       email: email.toLowerCase(),
-      role: { $in: [role, role.charAt(0).toUpperCase() + role.slice(1), role.toUpperCase()] }
+      role: role.toLowerCase()
     });
     
-    // Search in role-specific collections
-    if (!user && role === 'admin') {
-      user = await db.collection('admins').findOne({
-        email: email.toLowerCase()
+    console.log('👤 User search result:', user ? 'FOUND' : 'NOT FOUND');
+    
+    if (user) {
+      console.log('📋 User details:', {
+        email: user.email,
+        role: user.role,
+        hasPassword: !!user.password,
+        isActive: user.isActive
       });
-      if (user) user.role = 'admin';
     }
     
-    if (!user && role === 'supervisor') {
-      user = await db.collection('supervisors').findOne({
-        email: email.toLowerCase()
-      });
-      if (user) user.role = 'supervisor';
-    }
-
-    if (!user) {
-      console.log('User not found:', email);
+    // Check password
+    if (user && user.password === password) {
+      console.log('✅ Password correct - Login successful');
+      
+      const token = 'auth-' + Date.now() + '-' + user.role;
+      
       return NextResponse.json({
-        success: false,
-        message: 'Invalid credentials'
-      }, { status: 401 });
-    }
-
-    // Password verification (multiple methods)
-    let isPasswordValid = false;
-    
-    if (user.password === password) {
-      isPasswordValid = true;
-    } else if (password === 'admin123' && role === 'admin') {
-      isPasswordValid = true;
-    } else if (password === 'supervisor123' && role === 'supervisor') {
-      isPasswordValid = true;
+        success: true,
+        message: 'Login successful',
+        token,
+        user: {
+          id: user._id.toString(),
+          email: user.email,
+          role: user.role,
+          fullName: user.fullName || 'User',
+          isActive: true
+        }
+      });
     } else {
-      try {
-        isPasswordValid = await bcrypt.compare(password, user.password);
-      } catch (error) {
-        console.log('Bcrypt comparison failed, trying plain text');
-        isPasswordValid = user.password === password;
-      }
-    }
-
-    if (!isPasswordValid) {
-      console.log('Invalid password for:', email);
+      console.log('❌ Login failed - Invalid credentials');
       return NextResponse.json({
         success: false,
-        message: 'Invalid credentials'
+        message: 'Invalid email or password'
       }, { status: 401 });
     }
-
-    // Generate JWT token
-    const token = jwt.sign(
-      {
-        id: user._id?.toString() || Date.now().toString(),
-        email: user.email,
-        role: user.role,
-        fullName: user.fullName || user.name
-      },
-      process.env.JWT_SECRET || 'unibus-secret-key-2025',
-      { expiresIn: '24h' }
-    );
-
-    console.log('Login successful for:', email);
-
-    return NextResponse.json({
-      success: true,
-      message: 'Login successful',
-      token,
-      user: {
-        id: user._id?.toString() || Date.now().toString(),
-        email: user.email,
-        role: user.role,
-        fullName: user.fullName || user.name || 'User',
-        isActive: user.isActive !== false
-      }
-    });
 
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('💥 Login API error:', error);
     return NextResponse.json({
       success: false,
       message: 'Server error: ' + error.message
