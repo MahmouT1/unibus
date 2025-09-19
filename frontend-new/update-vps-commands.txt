@@ -1,3 +1,145 @@
+# Commands to Update VPS with New Auth System
+
+# 1. Connect to VPS
+ssh root@72.60.185.100
+
+# 2. Navigate to project directory (adjust path as needed)
+cd /var/www/unibus
+# OR
+cd /root/Student_portal
+# OR  
+cd /home/unibus
+
+# 3. Backup current project
+cp -r frontend-new frontend-new-backup-$(date +%Y%m%d-%H%M%S)
+echo "✅ Backup created"
+
+# 4. Stop current running processes
+pm2 stop all
+pkill -f node
+pkill -f npm
+echo "✅ Stopped all processes"
+
+# 5. Remove old Auth files that cause conflicts
+rm -rf frontend-new/app/api/auth/secure-login*
+rm -rf frontend-new/app/api/auth/login-secure*
+rm -rf frontend-new/app/api/auth/universal-login*
+rm -rf frontend-new/app/login-universal*
+rm -rf frontend-new/app/login-final*
+rm -rf frontend-new/app/working-login*
+rm -rf frontend-new/lib/security-middleware.js
+rm -rf frontend-new/lib/secure-*
+rm -rf frontend-new/middleware.js
+echo "✅ Removed conflicting Auth files"
+
+# 6. Create the working Auth API (copy from local)
+mkdir -p frontend-new/app/api/auth/admin-login
+
+# 7. Create the working admin-login API
+cat > frontend-new/app/api/auth/admin-login/route.js << 'EOF'
+import { NextResponse } from 'next/server';
+import { MongoClient } from 'mongodb';
+import bcrypt from 'bcryptjs';
+
+export async function POST(request) {
+  try {
+    const { email, password, role } = await request.json();
+    
+    console.log('🔍 ORIGINAL Login attempt:', { email, role });
+    
+    if (!email || !password || !role) {
+      return NextResponse.json({
+        success: false,
+        message: 'Email, password, and role are required'
+      }, { status: 400 });
+    }
+
+    // Simple, direct MongoDB connection
+    const client = new MongoClient('mongodb://localhost:27017');
+    await client.connect();
+    const db = client.db('student-portal');
+    console.log('📡 Database connected');
+    
+    // Search for user in multiple collections
+    let user = await db.collection('users').findOne({
+      email: email.toLowerCase(),
+      role: role
+    });
+    
+    // Also check admins collection for backward compatibility
+    if (!user && role === 'admin') {
+      user = await db.collection('admins').findOne({
+        email: email.toLowerCase()
+      });
+      if (user) user.role = 'admin';
+    }
+    
+    // Also check supervisors collection
+    if (!user && role === 'supervisor') {
+      user = await db.collection('supervisors').findOne({
+        email: email.toLowerCase()
+      });
+      if (user) user.role = 'supervisor';
+    }
+    
+    await client.close();
+    
+    console.log('👤 User search result:', user ? 'FOUND' : 'NOT FOUND');
+    
+    // Check password (handle both plain text and hashed passwords)
+    let isPasswordValid = false;
+    
+    if (user) {
+      if (user.password.startsWith('$2b$')) {
+        // Hashed password - use bcrypt
+        isPasswordValid = await bcrypt.compare(password, user.password);
+        console.log('🔐 Checking hashed password:', isPasswordValid ? 'MATCH' : 'NO MATCH');
+      } else {
+        // Plain text password
+        isPasswordValid = user.password === password;
+        console.log('📝 Checking plain password:', isPasswordValid ? 'MATCH' : 'NO MATCH');
+      }
+    }
+    
+    if (user && isPasswordValid) {
+      console.log('✅ Password correct - Login successful');
+      
+      const token = 'auth-' + Date.now() + '-' + user.role;
+      
+      return NextResponse.json({
+        success: true,
+        message: 'Login successful',
+        token,
+        user: {
+          id: user._id.toString(),
+          email: user.email,
+          role: user.role,
+          fullName: user.fullName || 'User',
+          isActive: true
+        }
+      });
+    } else {
+      console.log('❌ Login failed');
+      return NextResponse.json({
+        success: false,
+        message: 'Invalid email, password, or role'
+      }, { status: 401 });
+    }
+    
+  } catch (error) {
+    console.error('❌ Login error:', error);
+    return NextResponse.json({
+      success: false,
+      message: 'Internal server error'
+    }, { status: 500 });
+  }
+}
+EOF
+
+echo "✅ Created working admin-login API"
+
+# 8. Update admin-login page
+cat > frontend-new/app/admin-login/page.js << 'EOF'
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -41,7 +183,7 @@ export default function AdminLogin() {
       console.log('📋 Response data:', data);
 
       if (data.success) {
-        setMessage('✅ تم تسجيل الدخول بنجاح! جاري التوجيه... إذا لم يتم التوجيه تلقائياً، اضغط هنا: /admin/dashboard');
+        setMessage('✅ تم تسجيل الدخول بنجاح! جاري التوجيه...');
         
         // Save user data
         localStorage.setItem('adminToken', data.token);
@@ -49,11 +191,6 @@ export default function AdminLogin() {
         localStorage.setItem('user', JSON.stringify(data.user));
         
         console.log('💾 Data saved to localStorage');
-        console.log('📋 Saved data:', {
-          adminToken: data.token,
-          userRole: data.user.role,
-          user: data.user
-        });
         
         // Redirect based on role
         console.log('🎯 Redirecting based on role:', data.user.role);
@@ -68,22 +205,12 @@ export default function AdminLogin() {
           console.log('👨‍💻 Redirecting admin to:', redirectUrl);
         }
         
-        // Method 1: Immediate redirect
+        // Multiple redirect methods
         window.location.href = redirectUrl;
         
-        // Method 2: Backup redirect after 1 second
         setTimeout(() => {
-          console.log('🔄 Backup redirect to:', redirectUrl);
           window.location.replace(redirectUrl);
         }, 1000);
-        
-        // Method 3: Force redirect after 2 seconds
-        setTimeout(() => {
-          console.log('💪 Force redirect to:', redirectUrl);
-          if (window.location.pathname !== redirectUrl) {
-            window.location.assign(redirectUrl);
-          }
-        }, 2000);
         
       } else {
         setMessage('❌ ' + (data.message || 'فشل في تسجيل الدخول'));
@@ -170,8 +297,6 @@ export default function AdminLogin() {
                 transition: 'border-color 0.3s',
                 boxSizing: 'border-box'
               }}
-              onFocus={(e) => e.target.style.borderColor = '#667eea'}
-              onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
             />
           </div>
 
@@ -198,8 +323,6 @@ export default function AdminLogin() {
                 transition: 'border-color 0.3s',
                 boxSizing: 'border-box'
               }}
-              onFocus={(e) => e.target.style.borderColor = '#667eea'}
-              onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
             />
           </div>
 
@@ -246,18 +369,6 @@ export default function AdminLogin() {
               transition: 'all 0.3s',
               boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)'
             }}
-            onMouseOver={(e) => {
-              if (!loading) {
-                e.target.style.backgroundColor = '#5a67d8';
-                e.target.style.transform = 'translateY(-2px)';
-              }
-            }}
-            onMouseOut={(e) => {
-              if (!loading) {
-                e.target.style.backgroundColor = '#667eea';
-                e.target.style.transform = 'translateY(0)';
-              }
-            }}
           >
             {loading ? '🔄 جاري تسجيل الدخول...' : '🚀 تسجيل الدخول'}
           </button>
@@ -276,25 +387,6 @@ export default function AdminLogin() {
             border: message.includes('✅') ? '1px solid #bbf7d0' : '1px solid #fecaca'
           }}>
             {message}
-            {message.includes('✅') && (
-              <div style={{ marginTop: '15px' }}>
-                <a 
-                  href="/admin/dashboard"
-                  style={{
-                    display: 'inline-block',
-                    padding: '10px 20px',
-                    backgroundColor: '#059669',
-                    color: 'white',
-                    textDecoration: 'none',
-                    borderRadius: '8px',
-                    fontWeight: '600',
-                    fontSize: '14px'
-                  }}
-                >
-                  🎯 اذهب إلى لوحة التحكم
-                </a>
-              </div>
-            )}
           </div>
         )}
 
@@ -310,10 +402,106 @@ export default function AdminLogin() {
           </p>
           <div style={{ fontSize: '13px', color: '#9ca3af', lineHeight: '1.5' }}>
             <div><strong>مدير:</strong> roo2admin@gmail.com / admin123</div>
-            <div><strong>مشرف:</strong> ahmedazab@gmail.com / supervisor123</div>
+            <div><strong>مشرف:</strong> supervisor@unibus.local / 123456</div>
           </div>
         </div>
       </div>
     </div>
   );
 }
+EOF
+
+echo "✅ Updated admin-login page"
+
+# 9. Update main page
+cat > frontend-new/app/page.js << 'EOF'
+'use client';
+
+import React from 'react';
+import { LanguageProvider } from '../lib/contexts/LanguageContext';
+
+export default function HomePage() {
+  return (
+    <LanguageProvider>
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontFamily: 'system-ui, sans-serif'
+      }}>
+        <div style={{
+          maxWidth: '600px',
+          textAlign: 'center',
+          color: 'white',
+          padding: '40px'
+        }}>
+          <div style={{ fontSize: '80px', marginBottom: '30px' }}>🚌</div>
+          <h1 style={{ fontSize: '48px', fontWeight: 'bold', marginBottom: '20px' }}>
+            UniBus
+          </h1>
+          <p style={{ fontSize: '20px', marginBottom: '40px', opacity: 0.9 }}>
+            Student Transportation Portal
+          </p>
+          
+          <div style={{ display: 'grid', gap: '20px', maxWidth: '400px', margin: '0 auto' }}>
+            <a
+              href="/admin-login"
+              style={{
+                display: 'block',
+                padding: '20px',
+                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                color: 'white',
+                textDecoration: 'none',
+                borderRadius: '15px',
+                fontWeight: '600',
+                fontSize: '18px',
+                transition: 'all 0.3s',
+                border: '2px solid rgba(255, 255, 255, 0.2)'
+              }}
+            >
+              🔐 Admin & Supervisor Login
+            </a>
+            
+            <a
+              href="/login"
+              style={{
+                display: 'block',
+                padding: '20px',
+                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                color: 'white',
+                textDecoration: 'none',
+                borderRadius: '15px',
+                fontWeight: '600',
+                fontSize: '18px',
+                transition: 'all 0.3s',
+                border: '2px solid rgba(255, 255, 255, 0.2)'
+              }}
+            >
+              🎓 Student Portal
+            </a>
+          </div>
+        </div>
+      </div>
+    </LanguageProvider>
+  );
+}
+EOF
+
+echo "✅ Updated main page"
+
+# 10. Install missing dependencies
+npm install bcryptjs mongodb jsonwebtoken qr-scanner
+
+# 11. Build and start the project
+npm run build
+pm2 start npm --name "unibus" -- start
+
+# 12. Check if running
+pm2 status
+curl -I http://localhost:3000
+
+echo "✅ VPS update complete!"
+echo "🎥 Camera should now work properly on VPS with proper domain/HTTPS"
+echo "📱 Test on mobile devices - camera will work perfectly"

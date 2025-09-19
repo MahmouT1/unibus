@@ -1,29 +1,49 @@
 import { NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/simple-db.js';
+import { MongoClient } from 'mongodb';
+import bcrypt from 'bcryptjs';
 
 export async function POST(request) {
   try {
-    const body = await request.json();
-    const { email, password, role } = body;
+    const { email, password, role } = await request.json();
     
-    console.log('🔍 Login attempt:', { email, role, password });
+    console.log('🔍 ORIGINAL Login attempt:', { email, role });
     
     if (!email || !password || !role) {
       return NextResponse.json({
         success: false,
-        message: 'All fields required'
+        message: 'Email, password, and role are required'
       }, { status: 400 });
     }
 
-    // Connect to database
-    const db = await getDatabase();
+    // Simple, direct MongoDB connection
+    const client = new MongoClient('mongodb://localhost:27017');
+    await client.connect();
+    const db = client.db('student-portal');
     console.log('📡 Database connected');
     
-    // Search for user
-    const user = await db.collection('users').findOne({
+    // Search for user in multiple collections
+    let user = await db.collection('users').findOne({
       email: email.toLowerCase(),
-      role: role.toLowerCase()
+      role: role
     });
+    
+    // Also check admins collection for backward compatibility
+    if (!user && role === 'admin') {
+      user = await db.collection('admins').findOne({
+        email: email.toLowerCase()
+      });
+      if (user) user.role = 'admin';
+    }
+    
+    // Also check supervisors collection
+    if (!user && role === 'supervisor') {
+      user = await db.collection('supervisors').findOne({
+        email: email.toLowerCase()
+      });
+      if (user) user.role = 'supervisor';
+    }
+    
+    await client.close();
     
     console.log('👤 User search result:', user ? 'FOUND' : 'NOT FOUND');
     
@@ -36,8 +56,22 @@ export async function POST(request) {
       });
     }
     
-    // Check password
-    if (user && user.password === password) {
+    // Check password (handle both plain text and hashed passwords)
+    let isPasswordValid = false;
+    
+    if (user) {
+      if (user.password.startsWith('$2b$')) {
+        // Hashed password - use bcrypt
+        isPasswordValid = await bcrypt.compare(password, user.password);
+        console.log('🔐 Checking hashed password:', isPasswordValid ? 'MATCH' : 'NO MATCH');
+      } else {
+        // Plain text password
+        isPasswordValid = user.password === password;
+        console.log('📝 Checking plain password:', isPasswordValid ? 'MATCH' : 'NO MATCH');
+      }
+    }
+    
+    if (user && isPasswordValid) {
       console.log('✅ Password correct - Login successful');
       
       const token = 'auth-' + Date.now() + '-' + user.role;

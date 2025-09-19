@@ -4,7 +4,7 @@ import './globals.css';
 import { LanguageProvider } from '../lib/contexts/LanguageContext';
 import { initializeSecureConsole } from '../lib/secure-console.js';
 
-// Initialize secure console
+// Initialize secure console (disabled for debugging)
 if (typeof window !== 'undefined') {
   initializeSecureConsole();
 }

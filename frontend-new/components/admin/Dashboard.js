@@ -17,13 +17,18 @@ const Dashboard = () => {
   }, []);
   
   return (
-    <div className="dashboard">
-      <h1>Dashboard</h1>
-      <p>Manage your travel administration system</p>
+    <div className="dashboard" style={{ padding: '2rem' }}>
+      <div style={{ marginBottom: '2rem' }}>
+        <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '0.5rem' }}>Dashboard</h1>
+        <p style={{ color: '#6b7280', margin: 0 }}>Manage your travel administration system</p>
+      </div>
       <div style={{ background: '#e5f3ff', padding: '20px', borderRadius: '8px', margin: '20px 0' }}>
         <h3>Dashboard Content</h3>
         <p>This is the main dashboard content area.</p>
         <p>Current time: {new Date().toLocaleString()}</p>
+        {user && (
+          <p>Welcome, {user.email}! Role: {user.role}</p>
+        )}
       </div>
 
       <section className="cards">
@@ -36,7 +41,7 @@ const Dashboard = () => {
               <line x1="3" y1="10" x2="21" y2="10"></line>
             </svg>
           </div>
-          <h3>ِAttendance</h3>
+          <h3>Attendance</h3>
           <p>Track student attendance</p>
         </div>
         <div className="card" onClick={() => window.location.href = '/admin/subscription-management'} style={{cursor: 'pointer'}}>

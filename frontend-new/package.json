@@ -1,33 +1,24 @@
 {
-  "name": "student-portal-frontend",
+  "name": "unibus-student-portal",
   "version": "1.0.0",
-  "description": "Frontend for Student Portal System",
-  "private": true,
+  "description": "Student Transportation Portal System",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "export": "next export"
+    "start": "next start -p 3000",
+    "production": "next build && next start -p 3000"
   },
   "dependencies": {
-    "axios": "^1.5.0",
-    "dotenv": "^17.2.2",
-    "jsqr": "^1.4.0",
-    "next": "^14.0.0",
-    "node-fetch": "^3.3.2",
+    "next": "14.2.32",
+    "react": "^18",
+    "react-dom": "^18",
+    "mongodb": "^6.0.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.0",
     "qr-scanner": "^1.4.2",
     "qrcode": "^1.5.3",
-    "qrcode-reader": "^1.0.4",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-qr-code": "^2.0.12"
-  },
-  "devDependencies": {
-    "eslint": "^8.0.0",
-    "eslint-config-next": "^14.0.0"
-  },
-  "engines": {
-    "node": ">=16.0.0"
+    "jsqr": "^1.4.0",
+    "multer": "^1.4.5",
+    "sharp": "^0.33.0"
   }
 }
