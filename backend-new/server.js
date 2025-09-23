@@ -1,31 +1,84 @@
-// This is a Next.js project - the backend API routes are handled by Next.js
-// This file is kept for reference but the actual API routes are in the api/ directory
-// and are served by Next.js when running the frontend application.
-
-console.log('📝 Note: This is a Next.js project.');
-console.log('📝 API routes are located in the api/ directory and served by Next.js.');
-console.log('📝 To run the backend API, use the frontend application with: npm run dev');
-console.log('📝 The API will be available at http://localhost:3000/api/*');
-
-// Health check endpoint for standalone backend (if needed)
 const express = require('express');
+const cors = require('cors');
+const { MongoClient } = require('mongodb');
+require('dotenv').config();
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Middleware
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://72.60.185.100:3000'],
+  credentials: true
+}));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// MongoDB connection
+let db;
+const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
+
+// Connect to MongoDB
+MongoClient.connect(mongoUri)
+  .then(client => {
+    console.log('📡 Connected to MongoDB');
+    db = client.db('student-portal');
+    app.locals.db = db;
+  })
+  .catch(error => {
+    console.error('❌ MongoDB connection error:', error);
+  });
+
+// Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
-    message: 'Backend health check - API routes are served by Next.js'
+    message: 'Backend API Server Running',
+    database: db ? 'Connected' : 'Disconnected'
+  });
+});
+
+// API Routes
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/admin', require('./routes/admin'));
+app.use('/api/students', require('./routes/students'));
+app.use('/api/attendance', require('./routes/attendance'));
+app.use('/api/subscriptions', require('./routes/subscriptions'));
+app.use('/api/transportation', require('./routes/transportation'));
+app.use('/api/shifts', require('./routes/shifts'));
+
+// Error handling middleware
+app.use((error, req, res, next) => {
+  console.error('❌ Server Error:', error);
+  res.status(500).json({
+    success: false,
+    message: 'Internal server error',
+    error: process.env.NODE_ENV === 'development' ? error.message : 'Server error'
+  });
+});
+
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route ${req.originalUrl} not found`
   });
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Backend health server running on port ${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/health`);
+  console.log('🚀 Backend API Server Started');
+  console.log(`📍 Server: http://localhost:${PORT}`);
+  console.log(`📊 Health: http://localhost:${PORT}/health`);
+  console.log(`🔐 Auth API: http://localhost:${PORT}/api/auth/*`);
+  console.log(`👤 Admin API: http://localhost:${PORT}/api/admin/*`);
+  console.log(`🎓 Students API: http://localhost:${PORT}/api/students/*`);
+  console.log(`📋 Attendance API: http://localhost:${PORT}/api/attendance/*`);
+  console.log(`🚌 Transportation API: http://localhost:${PORT}/api/transportation/*`);
+  console.log(`💳 Subscriptions API: http://localhost:${PORT}/api/subscriptions/*`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`📝 For full API functionality, run the frontend with: cd ../frontend-new && npm run dev`);
+  console.log(`📡 Database: ${db ? 'Connected' : 'Connecting...'}`);
 });
 
 module.exports = app;

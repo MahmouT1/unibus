@@ -3,10 +3,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const QRCode = require('qrcode');
-const Student = require('../models/Student');
-const Subscription = require('../models/Subscription');
-const Attendance = require('../models/Attendance');
-const SupportTicket = require('../models/SupportTicket');
+const { MongoClient, ObjectId } = require('mongodb');
 const authMiddleware = require('../middleware/auth');
 const { body, validationResult } = require('express-validator');
 

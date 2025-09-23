@@ -1,50 +1,30 @@
 import { NextResponse } from 'next/server';
+import { getDatabase } from '@/lib/mongodb-simple-connection';
 
 export async function GET() {
   try {
-    // Mock today's attendance data
-    const records = [
-      {
-        _id: '1',
-        studentId: {
-          _id: 'student1',
-          fullName: 'Ahmed Hassan',
-          studentId: '2024001',
-          college: 'Engineering'
-        },
-        status: 'Present',
-        checkInTime: new Date().toISOString(),
-        appointmentSlot: 'first'
-      },
-      {
-        _id: '2',
-        studentId: {
-          _id: 'student2',
-          fullName: 'Mohamed Ali',
-          studentId: '2024002',
-          college: 'Medicine'
-        },
-        status: 'Late',
-        checkInTime: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-        appointmentSlot: 'first'
-      },
-      {
-        _id: '3',
-        studentId: {
-          _id: 'student3',
-          fullName: 'Sara Ahmed',
-          studentId: '2024003',
-          college: 'Business'
-        },
-        status: 'Present',
-        checkInTime: new Date().toISOString(),
-        appointmentSlot: 'second'
+    // Fetch real attendance data from database
+    const db = await getDatabase();
+    const attendanceCollection = db.collection('attendance');
+    
+    // Get today's date range
+    const today = new Date();
+    const startOfDay = new Date(today);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(today);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    // Query attendance records for today
+    const records = await attendanceCollection.find({
+      scanTime: {
+        $gte: startOfDay,
+        $lte: endOfDay
       }
-    ];
+    }).sort({ scanTime: -1 }).toArray();
 
     return NextResponse.json({
       success: true,
-      records
+      attendance: records
     });
   } catch (error) {
     console.error('Today attendance error:', error);

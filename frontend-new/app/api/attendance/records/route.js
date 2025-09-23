@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import connectDB from '../../../lib/mongodb.js';
-import Attendance from '../../../lib/Attendance.js';
+import { connectToDatabase } from '../../../../lib/mongodb';
+import { Attendance } from '../../../../lib/Attendance';
 
 export async function GET(request) {
   try {
-    await connectDB();
+    await connectToDatabase();
     
     const { searchParams } = new URL(request.url);
     const limit = searchParams.get('limit') || 50;

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Data Check</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        .title {
+            color: #2d3748;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .data-section {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 2px solid #e2e8f0;
+        }
+        .data-title {
+            color: #2d3748;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            text-align: center;
+            font-weight: 600;
+        }
+        .status.success {
+            background: #f0fff4;
+            color: #22543d;
+            border: 2px solid #48bb78;
+        }
+        .status.error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 2px solid #e53e3e;
+        }
+        .status.info {
+            background: #f0f9ff;
+            color: #1e40af;
+            border: 2px solid #3b82f6;
+        }
+        .btn {
+            background: #4299e1;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 8px;
+            transition: all 0.3s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        .btn-success {
+            background: #48bb78;
+        }
+        .btn-danger {
+            background: #e53e3e;
+        }
+        .data-results {
+            background: #1a202c;
+            color: #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        .data-item {
+            background: #fff5f5;
+            border: 2px solid #fed7d7;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title">🗄️ Database Data Check</div>
+        
+        <div class="data-section">
+            <div class="data-title">📊 Check Database Collections</div>
+            <div id="dbStatus" class="status info">
+                Click "Check Database" to verify data in all collections
+            </div>
+            <div style="text-align: center;">
+                <button class="btn btn-success" onclick="checkDatabase()">🗄️ Check Database</button>
+                <button class="btn btn-danger" onclick="clearResults()">🗑️ Clear Results</button>
+            </div>
+        </div>
+
+        <div class="data-section">
+            <div class="data-title">👥 Students Data</div>
+            <div id="studentsData" class="data-item">
+                <p>Click "Check Database" to see student data</p>
+            </div>
+        </div>
+
+        <div class="data-section">
+            <div class="data-title">👨‍💼 Users Data</div>
+            <div id="usersData" class="data-item">
+                <p>Click "Check Database" to see users data</p>
+            </div>
+        </div>
+
+        <div class="data-section">
+            <div class="data-title">📅 Attendance Data</div>
+            <div id="attendanceData" class="data-item">
+                <p>Click "Check Database" to see attendance data</p>
+            </div>
+        </div>
+
+        <div class="data-section">
+            <div class="data-title">⏰ Shifts Data</div>
+            <div id="shiftsData" class="data-item">
+                <p>Click "Check Database" to see shifts data</p>
+            </div>
+        </div>
+
+        <div id="testResults" class="data-results"></div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const resultsDiv = document.getElementById('testResults');
+            const timestamp = new Date().toLocaleTimeString();
+            const colors = {
+                success: 'color: #68d391; font-weight: bold;',
+                error: 'color: #fc8181; font-weight: bold;',
+                info: 'color: #63b3ed;',
+                warning: 'color: #f6e05e;'
+            };
+            
+            resultsDiv.innerHTML += `<div style="${colors[type]}">[${timestamp}] ${message}</div>`;
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        function updateStatus(message, type) {
+            const statusDiv = document.getElementById('dbStatus');
+            statusDiv.className = `status ${type}`;
+            statusDiv.innerHTML = message;
+        }
+
+        function updateDataSection(sectionId, title, data, count) {
+            const section = document.getElementById(sectionId);
+            section.innerHTML = `
+                <h4>${title}</h4>
+                <p><strong>Count:</strong> ${count}</p>
+                <details>
+                    <summary>View Data (${count} items)</summary>
+                    <pre style="background: #f7fafc; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 11px;">${JSON.stringify(data, null, 2)}</pre>
+                </details>
+            `;
+        }
+
+        async function checkDatabase() {
+            log('🗄️ Checking database collections...', 'info');
+            updateStatus('🔄 Checking database...', 'info');
+            
+            try {
+                // Check Students
+                log('👥 Checking students collection...', 'info');
+                const studentsResponse = await fetch('/api/students/profile-simple?admin=true');
+                const studentsData = await studentsResponse.json();
+                
+                if (studentsData.success) {
+                    const students = studentsData.students || {};
+                    const studentCount = Object.keys(students).length;
+                    log(`✅ Students: ${studentCount} found`, 'success');
+                    updateDataSection('studentsData', 'Students Collection', students, studentCount);
+                } else {
+                    log(`❌ Students error: ${studentsData.message}`, 'error');
+                    updateDataSection('studentsData', 'Students Collection', { error: studentsData.message }, 0);
+                }
+
+                // Check Users
+                log('👨‍💼 Checking users collection...', 'info');
+                const usersResponse = await fetch('/api/users/list?limit=50');
+                const usersData = await usersResponse.json();
+                
+                if (usersData.success) {
+                    const users = usersData.data.users || [];
+                    const userCount = users.length;
+                    log(`✅ Users: ${userCount} found`, 'success');
+                    updateDataSection('usersData', 'Users Collection', users, userCount);
+                } else {
+                    log(`❌ Users error: ${usersData.message}`, 'error');
+                    updateDataSection('usersData', 'Users Collection', { error: usersData.message }, 0);
+                }
+
+                // Check Attendance
+                log('📅 Checking attendance records...', 'info');
+                const attendanceResponse = await fetch('/api/attendance/all-records?limit=20');
+                const attendanceData = await attendanceResponse.json();
+                
+                if (attendanceData.success) {
+                    const records = attendanceData.records || [];
+                    const recordCount = records.length;
+                    log(`✅ Attendance: ${recordCount} records found`, 'success');
+                    updateDataSection('attendanceData', 'Attendance Records', records, recordCount);
+                } else {
+                    log(`❌ Attendance error: ${attendanceData.message}`, 'error');
+                    updateDataSection('attendanceData', 'Attendance Records', { error: attendanceData.message }, 0);
+                }
+
+                // Check Shifts
+                log('⏰ Checking shifts...', 'info');
+                const shiftsResponse = await fetch('/api/shifts?limit=20');
+                const shiftsData = await shiftsResponse.json();
+                
+                if (shiftsData.success) {
+                    const shifts = shiftsData.shifts || [];
+                    const shiftCount = shifts.length;
+                    log(`✅ Shifts: ${shiftCount} found`, 'success');
+                    updateDataSection('shiftsData', 'Shifts Collection', shifts, shiftCount);
+                } else {
+                    log(`❌ Shifts error: ${shiftsData.message}`, 'error');
+                    updateDataSection('shiftsData', 'Shifts Collection', { error: shiftsData.message }, 0);
+                }
+
+                updateStatus('✅ Database check completed', 'success');
+                log('✅ Database check completed successfully', 'success');
+
+            } catch (error) {
+                log(`❌ Database check failed: ${error.message}`, 'error');
+                updateStatus('❌ Database check failed', 'error');
+            }
+        }
+
+        function clearResults() {
+            document.getElementById('testResults').innerHTML = '';
+            updateStatus('Click "Check Database" to verify data in all collections', 'info');
+            
+            // Reset data sections
+            document.getElementById('studentsData').innerHTML = '<p>Click "Check Database" to see student data</p>';
+            document.getElementById('usersData').innerHTML = '<p>Click "Check Database" to see users data</p>';
+            document.getElementById('attendanceData').innerHTML = '<p>Click "Check Database" to see attendance data</p>';
+            document.getElementById('shiftsData').innerHTML = '<p>Click "Check Database" to see shifts data</p>';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            log('🗄️ Database Data Check Tool ready', 'info');
+            log('📋 This will check all database collections for data', 'info');
+        });
+    </script>
+</body>
+</html>

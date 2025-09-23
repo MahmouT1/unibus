@@ -22,7 +22,7 @@ export default function AdminSupportPage() {
     const userData = localStorage.getItem('user');
     
     if (!token || !userData) {
-      router.push('/login');
+      router.push('/auth');
       return;
     }
     

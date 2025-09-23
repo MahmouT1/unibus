@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import connectDB from '../../../lib/mongodb.js';
-import Attendance from '../../../lib/Attendance.js';
+import { connectToDatabase } from '../../../../lib/mongodb';
+import { Attendance } from '../../../../lib/Attendance';
 
 export async function POST(request) {
   try {
-    await connectDB();
+    await connectToDatabase();
     
     const body = await request.json();
     const { 

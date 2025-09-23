@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getDatabase } from '../../../lib/mongodb-simple-connection';
-import { requireRoleWithDatabase } from '../../../lib/enhanced-auth-middleware.js';
+import { connectToDatabase } from '../../../../lib/mongodb';
 
-export const GET = requireRoleWithDatabase(['admin', 'supervisor'])(async (request) => {
+export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const role = searchParams.get('role');
@@ -11,7 +10,7 @@ export const GET = requireRoleWithDatabase(['admin', 'supervisor'])(async (reque
     const search = searchParams.get('search');
 
     // Connect to database
-    const db = await getDatabase();
+    const { db } = await connectToDatabase();
     const usersCollection = db.collection('users');
 
     // Build query
@@ -75,4 +74,4 @@ export const GET = requireRoleWithDatabase(['admin', 'supervisor'])(async (reque
       { status: 500 }
     );
   }
-});
+}

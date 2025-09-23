@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDatabase } from '../../../lib/mongodb-simple-connection';
+import { connectToDatabase } from '../../../../lib/mongodb';
 
 export async function POST(request) {
   try {
@@ -14,7 +14,7 @@ export async function POST(request) {
     }
 
     // Connect to database
-    const db = await getDatabase();
+    const { db } = await connectToDatabase();
     const usersCollection = db.collection('users');
 
     // Check if user exists

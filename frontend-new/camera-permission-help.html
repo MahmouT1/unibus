@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Permission Help</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .help-container {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        .header h1 {
+            color: #2d3748;
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+        .step {
+            background: #f7fafc;
+            border-left: 4px solid #4299e1;
+            padding: 20px;
+            margin: 16px 0;
+            border-radius: 8px;
+        }
+        .step h3 {
+            color: #2d3748;
+            margin: 0 0 12px 0;
+            font-size: 18px;
+        }
+        .browser-section {
+            margin: 24px 0;
+            padding: 20px;
+            background: #edf2f7;
+            border-radius: 12px;
+        }
+        .browser-section h3 {
+            color: #2d3748;
+            margin-bottom: 16px;
+        }
+        .permission-visual {
+            background: #e6fffa;
+            border: 2px dashed #38b2ac;
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .success {
+            background: #f0fff4;
+            border-color: #48bb78;
+            color: #22543d;
+        }
+        .error {
+            background: #fed7d7;
+            border-color: #e53e3e;
+            color: #742a2a;
+        }
+        .back-btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #4299e1;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-top: 24px;
+        }
+        .back-btn:hover {
+            background: #3182ce;
+        }
+    </style>
+</head>
+<body>
+    <div class="help-container">
+        <div class="header">
+            <h1>📷 Camera Permission Help</h1>
+            <p>Follow these steps to enable camera access for QR scanning</p>
+        </div>
+
+        <div class="step">
+            <h3>🔍 Step 1: Look for the Camera Icon</h3>
+            <p>In your browser's address bar, look for a camera icon (📷) or lock icon (🔒). This indicates that the website is requesting camera access.</p>
+        </div>
+
+        <div class="permission-visual">
+            <div style="font-size: 24px; margin-bottom: 12px;">
+                🌐 http://localhost:3000 📷 🔒
+            </div>
+            <p><strong>Click on the camera icon or lock icon</strong></p>
+        </div>
+
+        <div class="step">
+            <h3>✅ Step 2: Allow Camera Access</h3>
+            <p>When prompted, select "Allow" or "Always allow" for camera access. This will enable the QR scanner to use your camera.</p>
+        </div>
+
+        <div class="browser-section">
+            <h3>🌐 Browser-Specific Instructions:</h3>
+            
+            <div style="margin: 16px 0;">
+                <strong>Google Chrome:</strong>
+                <ol>
+                    <li>Click the lock icon (🔒) in the address bar</li>
+                    <li>Find "Camera" in the permissions list</li>
+                    <li>Select "Allow" from the dropdown</li>
+                    <li>Refresh the page (F5 or Ctrl+R)</li>
+                </ol>
+            </div>
+
+            <div style="margin: 16px 0;">
+                <strong>Mozilla Firefox:</strong>
+                <ol>
+                    <li>Click the shield icon or camera icon</li>
+                    <li>Select "Allow" when prompted</li>
+                    <li>Or go to Settings → Privacy & Security → Permissions → Camera</li>
+                </ol>
+            </div>
+
+            <div style="margin: 16px 0;">
+                <strong>Microsoft Edge:</strong>
+                <ol>
+                    <li>Click the lock icon in the address bar</li>
+                    <li>Toggle "Camera" to "Allow"</li>
+                    <li>Refresh the page</li>
+                </ol>
+            </div>
+
+            <div style="margin: 16px 0;">
+                <strong>Safari:</strong>
+                <ol>
+                    <li>Safari menu → Settings for This Website</li>
+                    <li>Set Camera to "Allow"</li>
+                    <li>Or Safari → Preferences → Websites → Camera</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>🔄 Step 3: Refresh and Test</h3>
+            <p>After allowing camera access:</p>
+            <ol>
+                <li>Refresh the page (F5 or Ctrl+R)</li>
+                <li>Go back to the QR Scanner</li>
+                <li>Click "Check Camera Permissions" first</li>
+                <li>Then click "Start Scanner"</li>
+            </ol>
+        </div>
+
+        <div class="permission-visual success">
+            <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
+            <h3>Success!</h3>
+            <p>When camera access is granted, you'll see a green checkmark and the camera will start immediately.</p>
+        </div>
+
+        <div class="step">
+            <h3>🛠️ Troubleshooting</h3>
+            <p>If you're still having issues:</p>
+            <ul>
+                <li><strong>Close other apps</strong> that might be using the camera (Zoom, Teams, etc.)</li>
+                <li><strong>Try a different browser</strong> (Chrome, Firefox, Edge)</li>
+                <li><strong>Use incognito/private mode</strong> to test</li>
+                <li><strong>Restart your browser</strong> completely</li>
+                <li><strong>Check system camera settings</strong> (Windows Camera app, Mac Photo Booth)</li>
+            </ul>
+        </div>
+
+        <div class="permission-visual error">
+            <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+            <h3>Still Not Working?</h3>
+            <p>If camera access is still blocked, try:</p>
+            <ul>
+                <li>Clear browser cache and cookies</li>
+                <li>Disable browser extensions temporarily</li>
+                <li>Check antivirus software camera blocking</li>
+                <li>Ensure no physical camera cover is blocking the lens</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center;">
+            <a href="javascript:window.close()" class="back-btn">
+                ← Back to QR Scanner
+            </a>
+            <a href="http://localhost:3000" class="back-btn" style="margin-left: 12px;">
+                🏠 Go to Home
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Auto-check camera permissions on page load
+        window.addEventListener('load', async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                stream.getTracks().forEach(track => track.stop());
+                
+                // Show success message
+                const successElements = document.querySelectorAll('.permission-visual.success');
+                successElements.forEach(el => {
+                    el.style.display = 'block';
+                    el.innerHTML = `
+                        <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
+                        <h3>Camera Access Granted!</h3>
+                        <p>Your camera is working properly. You can now use the QR scanner.</p>
+                    `;
+                });
+                
+            } catch (error) {
+                console.log('Camera permission check failed:', error.name);
+                
+                // Show specific error
+                const errorElements = document.querySelectorAll('.permission-visual.error');
+                errorElements.forEach(el => {
+                    let errorMsg = '';
+                    switch (error.name) {
+                        case 'NotAllowedError':
+                            errorMsg = 'Camera permission is currently blocked. Follow the steps above to allow access.';
+                            break;
+                        case 'NotFoundError':
+                            errorMsg = 'No camera found. Please connect a camera and try again.';
+                            break;
+                        default:
+                            errorMsg = `Camera error: ${error.message}`;
+                    }
+                    
+                    el.innerHTML = `
+                        <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+                        <h3>Camera Issue Detected</h3>
+                        <p>${errorMsg}</p>
+                    `;
+                });
+            }
+        });
+    </script>
+</body>
+</html>

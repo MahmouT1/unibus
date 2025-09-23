@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import AdminRoute from '../../../lib/AdminRoute';
 import ExpenseForm from '../../../components/admin/ExpenseForm';
 import DriverSalaryForm from '../../../components/admin/DriverSalaryForm';
 import { useLanguage } from '../../../lib/contexts/LanguageContext';
@@ -31,7 +30,8 @@ function AdminUsersLayoutContent({ children }) {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('student');
-    router.push('/');
+    sessionStorage.clear();
+    router.push('/auth');
   };
 
   const handleExpenseSuccess = () => {

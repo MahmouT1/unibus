@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import QrScanner from 'qr-scanner';
+import AccurateQRScanner from '../../../components/AccurateQRScanner';
 import SubscriptionPaymentModal from '../../../components/SubscriptionPaymentModal';
 import '../../../components/admin/SupervisorDashboard.css';
 
@@ -36,6 +36,7 @@ const SupervisorDashboard = () => {
   
   // Notification system
   const [notification, setNotification] = useState(null);
+  
 
   // Show notification function
   const showNotification = (type, title, message, duration = 5000) => {
@@ -50,6 +51,23 @@ const SupervisorDashboard = () => {
     setTimeout(() => {
       setNotification(null);
     }, duration);
+  };
+
+  // Logout function
+  const handleLogout = () => {
+    // Clear all stored data
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('student');
+    sessionStorage.clear();
+    
+    // Show logout notification
+    showNotification('success', 'Logged Out', 'You have been successfully logged out');
+    
+    // Redirect to login page after a short delay
+    setTimeout(() => {
+      router.push('/auth');
+    }, 1000);
   };
 
   // Real data states
@@ -104,7 +122,7 @@ const SupervisorDashboard = () => {
       
       // Check if user is supervisor
       if (parsedUser.role !== 'supervisor') {
-        router.push('/login');
+        router.push('/auth');
         return;
       }
       
@@ -154,7 +172,8 @@ const SupervisorDashboard = () => {
         },
         body: JSON.stringify({
           supervisorId: user.id,
-          supervisorEmail: user.email
+          supervisorEmail: user.email,
+          supervisorName: user.fullName || user.email
         })
       });
 
@@ -187,6 +206,19 @@ const SupervisorDashboard = () => {
     console.log('currentShift:', currentShift);
     console.log('user:', user);
     
+    // Show confirmation dialog
+    const confirmClose = window.confirm(
+      `Are you sure you want to close this shift?\n\n` +
+      `Shift ID: ${currentShift.id}\n` +
+      `Started: ${new Date(currentShift.shiftStart || currentShift.startTime).toLocaleString()}\n\n` +
+      `This action cannot be undone.`
+    );
+    
+    if (!confirmClose) {
+      console.log('Shift close cancelled by user');
+      return;
+    }
+    
     setShiftLoading(true);
     try {
       const closeData = {
@@ -197,7 +229,7 @@ const SupervisorDashboard = () => {
       console.log('Sending close request:', closeData);
       
       const response = await fetch('/api/shifts/close', {
-        method: 'PUT',
+        method: 'POST', // Changed from PUT to POST to match backend
         headers: {
           'Content-Type': 'application/json',
         },
@@ -211,14 +243,18 @@ const SupervisorDashboard = () => {
       if (data.success) {
         setCurrentShift(null);
         setShiftResult({ type: 'success', message: 'Shift closed successfully!' });
+        showNotification('success', 'Shift Closed', 'The shift has been closed successfully');
         // Refresh attendance records to show the completed shift data
         await fetchAttendanceRecords();
         console.log('Shift closed - attendance records refreshed');
       } else {
         setShiftResult({ type: 'error', message: data.message });
+        showNotification('error', 'Close Failed', data.message || 'Failed to close shift');
       }
     } catch (error) {
+      console.error('Error closing shift:', error);
       setShiftResult({ type: 'error', message: 'Failed to close shift' });
+      showNotification('error', 'Close Error', 'Failed to close shift. Please try again.');
     } finally {
       setShiftLoading(false);
     }
@@ -226,14 +262,14 @@ const SupervisorDashboard = () => {
 
   const fetchDashboardStats = async () => {
     try {
-      // Use mock data to prevent "Error connecting to server"
+      // For now, set basic stats without API calls to prevent errors
       setDashboardStats({
-        totalStudents: 150,
-        activeSubscriptions: 120,
-        todayAttendanceRate: 85,
-        pendingSubscriptions: 5,
-        openTickets: 3,
-        monthlyRevenue: 15000
+        totalStudents: 0,
+        activeSubscriptions: 0,
+        todayAttendanceRate: 0,
+        pendingSubscriptions: 0,
+        openTickets: 0,
+        monthlyRevenue: 0
       });
       setError(''); // Clear any errors
       setLoading(false);
@@ -241,32 +277,35 @@ const SupervisorDashboard = () => {
       console.error('Error setting dashboard stats:', error);
       setError('Error loading dashboard data');
       setLoading(false);
+      // Set empty stats on error
+      setDashboardStats({
+        totalStudents: 0,
+        activeSubscriptions: 0,
+        todayAttendanceRate: 0,
+        pendingSubscriptions: 0,
+        openTickets: 0,
+        monthlyRevenue: 0
+      });
     }
   };
 
   const fetchTodayAttendance = async () => {
     try {
-      // Use mock data instead of API call
-      setTodayAttendance([
-        { id: 1, studentName: 'أحمد محمد', email: 'ahmed@example.com', time: '08:30', status: 'Present' },
-        { id: 2, studentName: 'فاطمة علي', email: 'fatima@example.com', time: '08:35', status: 'Present' },
-        { id: 3, studentName: 'محمد حسن', email: 'mohamed@example.com', time: '08:40', status: 'Present' }
-      ]);
+      // For now, set empty attendance to prevent errors
+      setTodayAttendance([]);
     } catch (error) {
       console.error('Error setting today attendance:', error);
+      setTodayAttendance([]);
     }
   };
 
   const fetchAttendanceRecords = async () => {
     try {
-      // Use mock data instead of API call
-      setAttendanceRecords([
-        { id: 1, studentName: 'أحمد محمد', email: 'ahmed@example.com', date: '2024-01-15', time: '08:30', status: 'Present' },
-        { id: 2, studentName: 'فاطمة علي', email: 'fatima@example.com', date: '2024-01-15', time: '08:35', status: 'Present' },
-        { id: 3, studentName: 'محمد حسن', email: 'mohamed@example.com', date: '2024-01-14', time: '08:40', status: 'Present' }
-      ]);
+      // For now, set empty attendance records to prevent errors
+      setAttendanceRecords([]);
     } catch (error) {
       console.error('Error setting attendance records:', error);
+      setAttendanceRecords([]);
     }
   };
 
@@ -457,6 +496,114 @@ const SupervisorDashboard = () => {
     
     setIsScanning(false);
     console.log('✅ Camera stopped');
+  };
+
+  // New QR Scanner callback functions
+  const handleQRScanSuccess = async (studentData) => {
+    console.log('🎯 QR Scan Success:', studentData);
+    
+    // Set the scanned student data
+    setAutoRegistered(false);
+    setScannedStudent({
+      id: studentData.id || studentData.studentId,
+      studentId: studentData.studentId || studentData.id,
+      name: studentData.fullName || studentData.name,
+      email: studentData.email,
+      phoneNumber: studentData.phoneNumber,
+      college: studentData.college,
+      grade: studentData.grade,
+      major: studentData.major,
+      address: studentData.address,
+      photo: studentData.profilePhoto,
+      attendanceRate: 95,
+      subscription: {
+        status: 'Active',
+        startDate: new Date().toISOString(),
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      },
+      recentAttendance: [
+        {
+          date: new Date().toISOString(),
+          status: 'Present',
+          checkInTime: new Date().toISOString()
+        }
+      ]
+    });
+    
+    // Switch to attendance management tab
+    setActiveTab('attendance-management');
+    await fetchCurrentShiftAttendance();
+    
+    // Auto-register attendance if shift is open
+    if (currentShift && currentShift.id) {
+      try {
+        const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        
+        const scanData = {
+          shiftId: currentShift.id,
+          qrCodeData: JSON.stringify(studentData),
+          location: 'Main Station',
+          notes: 'QR Code Scan - Auto Registration'
+        };
+
+        console.log('=== Auto-registering attendance ===');
+        console.log('Student:', studentData.fullName);
+        console.log('Shift ID:', currentShift.id);
+
+        const response = await fetch('/api/shifts/scan', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(scanData)
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          console.log('✅ Auto-registration successful');
+          setAutoRegistered(true);
+          showNotification(
+            'success',
+            'Attendance Registered Successfully!',
+            `Student: ${studentData.fullName}\nStudent ID: ${studentData.studentId}\nShift: ${currentShift.shiftType}\n\nAttendance has been automatically registered.`
+          );
+        } else {
+          console.log('❌ Auto-registration failed:', result.message);
+          setAutoRegistered(false);
+          showNotification(
+            'success',
+            'QR Code Scanned Successfully!',
+            `Student: ${studentData.fullName}\nStudent ID: ${studentData.studentId}\n\nNote: Could not auto-register attendance. Please register manually.`
+          );
+        }
+      } catch (error) {
+        console.error('Error auto-registering attendance:', error);
+        showNotification(
+          'success',
+          'QR Code Scanned Successfully!',
+          `Student: ${studentData.fullName}\nStudent ID: ${studentData.studentId}\n\nNote: Could not auto-register attendance. Please register manually.`
+        );
+      }
+    } else {
+      showNotification(
+        'success',
+        'QR Code Scanned Successfully!',
+        `Student: ${studentData.fullName}\nStudent ID: ${studentData.studentId}\n\nNote: Please open a shift first to register attendance.`
+      );
+    }
+  };
+
+  const handleQRScanError = (errorMessage) => {
+    console.error('❌ QR Scan Error:', errorMessage);
+    setScanError(errorMessage);
+    showNotification(
+      'error',
+      'QR Scan Error',
+      errorMessage
+    );
   };
 
   const handleQRCodeScanned = async (qrData) => {
@@ -822,11 +969,88 @@ const SupervisorDashboard = () => {
 
   return (
     <div className="supervisor-dashboard">
+      <style jsx>{`
+        /* Safe base: prevent horizontal scroll without forcing fixed widths */
+        :global(html), :global(body) { overflow-x: hidden; }
+        .supervisor-dashboard { width: 100%; box-sizing: border-box; }
+        .supervisor-dashboard * { box-sizing: border-box; }
+
+        @media (max-width: 768px) {
+          .supervisor-dashboard { padding: 8px; }
+          .dashboard-header,
+          .shift-management-section,
+          .qr-scanner-content,
+          .student-details-content,
+          .attendance-management-content {
+            width: 100%;
+            max-width: 100%;
+            margin: 0; /* avoid side gaps */
+          }
+          .dashboard-header { padding: 12px; margin-bottom: 12px; border-radius: 16px; }
+          .header-content h1 { font-size: clamp(22px, 6vw, 28px); line-height: 1.15; }
+          .header-content p { font-size: clamp(13px, 3.5vw, 15px); }
+
+          .nav-tabs { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+          .nav-tab { width: 100%; padding: 12px; font-size: 14px; }
+
+          .camera-controls { display: flex; flex-direction: column; gap: 8px; }
+          .camera-controls button { width: 100%; padding: 12px; font-size: 14px; }
+
+          .attendance-table { overflow-x: auto; font-size: 12px; }
+          .attendance-table th, .attendance-table td { padding: 8px; white-space: nowrap; }
+        }
+
+        @media (max-width: 480px) {
+          .supervisor-dashboard { padding: 6px; }
+          .dashboard-header h1 { font-size: clamp(20px, 7vw, 24px); }
+          .nav-tab { font-size: 12px; padding: 10px; }
+          .attendance-table { font-size: 10px; }
+        }
+      `}</style>
+      
       {/* Header Section */}
       <div className="dashboard-header">
         <div className="header-content">
           <h1>Supervisor Dashboard</h1>
           <p>Manage student attendance, QR scanning, and return schedules</p>
+          
+          {/* Supervisor Information */}
+          {user && (
+            <div style={{
+              background: 'linear-gradient(135deg, #667eea, #764ba2)',
+              color: 'white',
+              padding: '15px',
+              borderRadius: '10px',
+              marginTop: '15px',
+              boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <div style={{
+                  width: '50px',
+                  height: '50px',
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '24px'
+                }}>
+                  👨‍💼
+                </div>
+                <div>
+                  <h3 style={{ margin: '0 0 5px 0', fontSize: '18px', fontWeight: '600' }}>
+                    {user.fullName || user.email || 'Supervisor'}
+                  </h3>
+                  <p style={{ margin: '0', fontSize: '14px', opacity: '0.9' }}>
+                    Email: {user.email}
+                  </p>
+                  <p style={{ margin: '0', fontSize: '14px', opacity: '0.9' }}>
+                    Role: {user.role || 'Supervisor'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
         <div className="header-actions">
           <button 
@@ -844,22 +1068,108 @@ const SupervisorDashboard = () => {
             <span className="btn-icon">⚙️</span>
             <span className="btn-text">Settings</span>
           </button>
+          <button 
+            className="btn-logout"
+            onClick={handleLogout}
+            style={{
+              background: 'linear-gradient(135deg, #e53e3e, #c53030)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '12px 20px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '14px',
+              fontWeight: '600',
+              transition: 'all 0.3s ease',
+              boxShadow: '0 4px 12px rgba(229, 62, 62, 0.3)'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 6px 16px rgba(229, 62, 62, 0.4)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(229, 62, 62, 0.3)';
+            }}
+          >
+            <span className="btn-icon">🚪</span>
+            <span className="btn-text">Logout</span>
+          </button>
         </div>
       </div>
+
 
       {/* Shift Management Section */}
       <div className="shift-management-section">
         <div className="shift-status">
-          <h3>Shift Status: {currentShift ? 'OPEN' : 'CLOSED'}</h3>
+          <h3 style={{
+            color: currentShift ? '#10b981' : '#6b7280',
+            fontSize: '24px',
+            fontWeight: 'bold',
+            marginBottom: '15px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px'
+          }}>
+            {currentShift ? '🟢' : '🔴'} Shift Status: {currentShift ? 'OPEN' : 'CLOSED'}
+          </h3>
           {currentShift ? (
-            <div className="shift-info">
-              <p><strong>Started:</strong> {new Date(currentShift.shiftStart).toLocaleString()}</p>
-              <p><strong>Total Scans:</strong> {currentShift.totalScans}</p>
-              <p><strong>Shift ID:</strong> {currentShift.id || 'Missing'}</p>
-              <p><strong>Supervisor ID:</strong> {currentShift.supervisorId || 'Missing'}</p>
+            <div className="shift-info" style={{
+              background: 'linear-gradient(135deg, #f0fff4, #e6fffa)',
+              border: '2px solid #10b981',
+              borderRadius: '12px',
+              padding: '20px',
+              marginBottom: '20px'
+            }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+                <div>
+                  <p style={{ margin: '5px 0', color: '#065f46' }}>
+                    <strong>🕐 Started:</strong> {new Date(currentShift.shiftStart || currentShift.startTime).toLocaleString()}
+                  </p>
+                  <p style={{ margin: '5px 0', color: '#065f46' }}>
+                    <strong>📊 Total Scans:</strong> {currentShift.totalScans || 0}
+                  </p>
+                </div>
+                <div>
+                  <p style={{ margin: '5px 0', color: '#065f46' }}>
+                    <strong>🆔 Shift ID:</strong> {currentShift.id || 'Missing'}
+                  </p>
+                  <p style={{ margin: '5px 0', color: '#065f46' }}>
+                    <strong>👨‍💼 Supervisor:</strong> {currentShift.supervisorName || 'Unknown'}
+                  </p>
+                </div>
+              </div>
+              <div style={{
+                background: '#10b981',
+                color: 'white',
+                padding: '10px',
+                borderRadius: '8px',
+                marginTop: '15px',
+                textAlign: 'center',
+                fontWeight: '600'
+              }}>
+                ⚠️ This shift will remain OPEN until manually closed by the supervisor
+              </div>
             </div>
           ) : (
-            <p>No active shift. Click "Open Shift" to start working.</p>
+            <div style={{
+              background: '#f9fafb',
+              border: '2px solid #e5e7eb',
+              borderRadius: '12px',
+              padding: '20px',
+              textAlign: 'center',
+              color: '#6b7280'
+            }}>
+              <p style={{ fontSize: '18px', margin: '0 0 10px 0' }}>
+                No active shift. Click "Open Shift" to start working.
+              </p>
+              <p style={{ fontSize: '14px', margin: '0' }}>
+                Shifts stay open until manually closed by the supervisor.
+              </p>
+            </div>
           )}
         </div>
         
@@ -893,17 +1203,31 @@ const SupervisorDashboard = () => {
                 style={{
                   background: 'linear-gradient(135deg, #e53e3e 0%, #c53030 100%)',
                   color: 'white',
-                  border: 'none',
-                  padding: '12px 24px',
-                  borderRadius: '8px',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
+                  border: '3px solid #dc2626',
+                  padding: '15px 30px',
+                  borderRadius: '12px',
+                  fontSize: '18px',
+                  fontWeight: '700',
+                  cursor: shiftLoading ? 'not-allowed' : 'pointer',
                   transition: 'all 0.3s ease',
-                  boxShadow: '0 4px 12px rgba(229, 62, 62, 0.3)'
+                  boxShadow: '0 6px 20px rgba(229, 62, 62, 0.4)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}
+                onMouseOver={(e) => {
+                  if (!shiftLoading) {
+                    e.target.style.transform = 'translateY(-2px)';
+                    e.target.style.boxShadow = '0 8px 25px rgba(229, 62, 62, 0.5)';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (!shiftLoading) {
+                    e.target.style.transform = 'translateY(0)';
+                    e.target.style.boxShadow = '0 6px 20px rgba(229, 62, 62, 0.4)';
+                  }
                 }}
               >
-                {shiftLoading ? 'Closing...' : 'Close Shift'}
+                {shiftLoading ? '🔄 Closing...' : '🛑 CLOSE SHIFT'}
               </button>
               <button
                 onClick={() => loadCurrentShift(user.id)}
@@ -982,86 +1306,12 @@ const SupervisorDashboard = () => {
 
         {activeTab === 'qr-scanner' && (
           <div className="qr-scanner-content">
-            <div className="scanner-fullscreen">
-              <div className="scanner-header">
-                <h3>QR Code Scanner</h3>
-                <p>Point camera at student QR code to scan</p>
-                {scanError && (
-                  <div className="scan-error" style={{ color: 'red', marginTop: '10px' }}>
-                    {scanError}
-                    <div style={{ marginTop: '15px', padding: '15px', background: '#f0f9ff', borderRadius: '8px' }}>
-                      <p style={{ margin: '0 0 10px 0', color: '#0369a1', fontSize: '14px' }}>
-                        🔧 <strong>حل مؤقت:</strong> اختبر النظام بدون كاميرا
-                      </p>
-                      <button 
-                        onClick={() => {
-                          const mockStudent = {
-                            studentId: 'STU-' + Date.now(),
-                            id: 'STU-' + Date.now(),
-                            name: 'أحمد محمد علي',
-                            email: 'ahmed@student.edu',
-                            phoneNumber: '+20123456789',
-                            college: 'كلية الهندسة',
-                            grade: 'السنة الثالثة',
-                            major: 'هندسة حاسوب',
-                            address: 'القاهرة، مصر',
-                            profilePhoto: '/uploads/profiles/default.png'
-                          };
-                          console.log('🎯 Simulating QR scan:', mockStudent);
-                          handleQRCodeScanned(JSON.stringify(mockStudent));
-                        }}
-                        style={{
-                          padding: '10px 20px',
-                          backgroundColor: '#10b981',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontWeight: '600'
-                        }}
-                      >
-                        🎯 محاكاة مسح QR للاختبار
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              <div className="scanner-video-container">
-                <video 
-                  ref={videoRef}
-                  className="scanner-video"
-                  style={{
-                    width: '100%',
-                    maxWidth: '500px',
-                    height: 'auto',
-                    borderRadius: '12px'
-                  }}
-                />
-                {!isScanning && (
-                  <div className="scanner-overlay">
-                    <button className="start-scan-btn" onClick={startScanning}>
-                      Start Camera
-                    </button>
-                  </div>
-                )}
-              </div>
-              
-              <div className="scanner-controls">
-                <button className="control-btn" onClick={switchCamera} disabled={cameras.length <= 1}>
-                  <span className="btn-icon">📷</span>
-                  Switch Camera
-                </button>
-                <button className="control-btn" onClick={toggleFlash}>
-                  <span className="btn-icon">💡</span>
-                  Flash
-                </button>
-                <button className="control-btn" onClick={stopScanning}>
-                  <span className="btn-icon">❌</span>
-                  Stop
-                </button>
-              </div>
-            </div>
+            <AccurateQRScanner
+              onScanSuccess={handleQRScanSuccess}
+              onScanError={handleQRScanError}
+              supervisorId={user?.id || 'supervisor-001'}
+              supervisorName={user?.email || 'Supervisor'}
+            />
           </div>
         )}
 

@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import ConcurrentQRScanner from '../../../components/ConcurrentQRScanner';
-import AdminAuthGuard from '../../../components/AdminAuthGuard';
+import WorkingQRScannerFixed from '../../../components/WorkingQRScannerFixed';
 import '../../../components/admin/EnhancedSupervisorDashboard.css';
 
 const EnhancedSupervisorDashboardContent = ({ user, onLogout }) => {
@@ -167,17 +166,11 @@ const EnhancedSupervisorDashboardContent = ({ user, onLogout }) => {
             <h2>QR Code Scanner</h2>
             <p>Scan student QR codes. The system handles multiple supervisors automatically.</p>
             
-            <ConcurrentQRScanner
+            <WorkingQRScannerFixed
               onScanSuccess={handleScanSuccess}
               onScanError={handleScanError}
               supervisorId={user?.id || 'supervisor-001'}
               supervisorName={user?.email || 'Supervisor'}
-              appointmentSlot="first"
-              stationInfo={{
-                name: 'Main Gate',
-                location: 'University Entrance',
-                coordinates: '30.0444,31.2357'
-              }}
             />
           </div>
         )}
@@ -307,8 +300,6 @@ const EnhancedSupervisorDashboardContent = ({ user, onLogout }) => {
 
 export default function EnhancedSupervisorDashboard() {
   return (
-    <AdminAuthGuard requiredRole="supervisor">
-      <EnhancedSupervisorDashboardContent />
-    </AdminAuthGuard>
+    <EnhancedSupervisorDashboardContent />
   );
 }

@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import AdminAuthGuard from '../../../components/AdminAuthGuard';
 import { useLanguage } from '../../../lib/contexts/LanguageContext';
 import LanguageSwitcher from '../../../components/LanguageSwitcher';
 import '../admin-layout.css';

@@ -1,97 +1,45 @@
-// models/Attendance.js
-import mongoose from 'mongoose';
+import { connectToDatabase } from './mongodb';
 
-const attendanceSchema = new mongoose.Schema({
-    studentId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Student',
-        required: true
-    },
-    studentName: {
-        type: String,
-        required: true
-    },
-    studentEmail: {
-        type: String,
-        required: true
-    },
-    studentPhone: {
-        type: String
-    },
-    studentCollege: {
-        type: String
-    },
-    studentGrade: {
-        type: String
-    },
-    studentMajor: {
-        type: String
-    },
-    studentAddress: {
-        type: Object
-    },
-    date: {
-        type: Date,
-        required: true,
-        default: Date.now
-    },
-    status: {
-        type: String,
-        enum: ['Present', 'Late', 'Absent'],
-        required: true,
-        default: 'Present'
-    },
-    checkInTime: {
-        type: Date,
-        default: Date.now
-    },
-    appointmentSlot: {
-        type: String,
-        enum: ['first', 'second'], // 08:00 AM, 02:00 PM
-        required: true
-    },
-    station: {
-        name: String,
-        location: String,
-        coordinates: String
-    },
-    qrScanned: {
-        type: Boolean,
-        default: true
-    },
-    supervisorId: {
-        type: String // Changed to String to match our current system
-    },
-    supervisorName: {
-        type: String
-    },
-    notes: {
-        type: String
-    },
-    qrData: {
-        type: Object // Store the complete QR data for reference
-    },
-    verified: {
-        type: Boolean,
-        default: false
-    }
-}, {
-    timestamps: true
-});
+export class Attendance {
+  static async create(attendanceData) {
+    const { db } = await connectToDatabase();
+    const result = await db.collection('attendance').insertOne({
+      ...attendanceData,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+    return result;
+  }
 
-// Ensure one attendance record per student per day per slot
-attendanceSchema.index({ studentId: 1, date: 1, appointmentSlot: 1 }, { unique: true });
+  static async findByStudentId(studentId) {
+    const { db } = await connectToDatabase();
+    return await db.collection('attendance').find({ studentId }).toArray();
+  }
 
-// Clear any existing model to avoid conflicts
-if (mongoose.models.Attendance) {
-  delete mongoose.models.Attendance;
+  static async findByDate(date) {
+    const { db } = await connectToDatabase();
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    return await db.collection('attendance').find({
+      createdAt: {
+        $gte: startOfDay,
+        $lte: endOfDay
+      }
+    }).toArray();
+  }
+
+  static async findAll() {
+    const { db } = await connectToDatabase();
+    return await db.collection('attendance').find({}).sort({ createdAt: -1 }).toArray();
+  }
+
+  static async deleteById(id) {
+    const { db } = await connectToDatabase();
+    const { ObjectId } = require('mongodb');
+    return await db.collection('attendance').deleteOne({ _id: new ObjectId(id) });
+  }
 }
-
-let Attendance;
-try {
-  Attendance = mongoose.model('Attendance');
-} catch (error) {
-  Attendance = mongoose.model('Attendance', attendanceSchema);
-}
-
-export default Attendance;

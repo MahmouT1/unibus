@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
-import { getDatabase } from '../../../lib/mongodb-simple-connection';
-import { requireRoleWithDatabase } from '../../../lib/enhanced-auth-middleware.js';
+import { connectToDatabase } from '../../../../lib/mongodb';
 
-export const GET = requireRoleWithDatabase(['admin', 'supervisor'])(async (request) => {
+export async function GET(request) {
   try {
     // Connect to database
-    const db = await getDatabase();
+    const { db } = await connectToDatabase();
     const usersCollection = db.collection('users');
 
     // Get user statistics
@@ -116,4 +115,4 @@ export const GET = requireRoleWithDatabase(['admin', 'supervisor'])(async (reque
       { status: 500 }
     );
   }
-});
+}

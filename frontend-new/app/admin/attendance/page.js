@@ -41,6 +41,7 @@ function AdminAttendancePageContent() {
   
   // Active shifts for live monitoring
   const [activeShifts, setActiveShifts] = useState([]);
+  const [shiftIndicator, setShiftIndicator] = useState(null);
   
   // Shift-based pagination states
   const [supervisorShifts, setSupervisorShifts] = useState([]);
@@ -66,7 +67,7 @@ function AdminAttendancePageContent() {
         setUser(parsedUser);
       } catch (error) {
         console.error('Error parsing user data:', error);
-        router.push('/login');
+        router.push('/auth');
       }
     } else {
       router.push('/login');
@@ -260,6 +261,17 @@ function AdminAttendancePageContent() {
         const data = await response.json();
         if (data.success) {
           setActiveShifts(data.shifts);
+          
+          // Update shift indicator
+          if (data.shifts && data.shifts.length > 0) {
+            setShiftIndicator({
+              isActive: true,
+              count: data.shifts.length,
+              shifts: data.shifts
+            });
+          } else {
+            setShiftIndicator(null);
+          }
           console.log('Active shifts loaded:', data.shifts.length);
         }
       }
@@ -489,7 +501,42 @@ function AdminAttendancePageContent() {
           </div>
         </div>
       </div>
-
+      
+      {/* Shift Indicator - Large Green Box */}
+      {shiftIndicator && shiftIndicator.isActive && (
+        <div style={{
+          background: 'linear-gradient(135deg, #10b981, #059669)',
+          color: 'white',
+          padding: '20px',
+          borderRadius: '12px',
+          marginBottom: '30px',
+          boxShadow: '0 8px 25px rgba(16, 185, 129, 0.3)',
+          border: '2px solid #10b981',
+          animation: 'pulse 2s infinite'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h2 style={{ margin: '0 0 8px 0', fontSize: '24px', fontWeight: 'bold' }}>
+                🟢 ACTIVE SHIFTS DETECTED
+              </h2>
+              <p style={{ margin: '0', fontSize: '16px', opacity: '0.9' }}>
+                {shiftIndicator.count} supervisor{shiftIndicator.count > 1 ? 's' : ''} currently working
+              </p>
+              <div style={{ marginTop: '10px', fontSize: '14px', opacity: '0.8' }}>
+                {shiftIndicator.shifts.map((shift, index) => (
+                  <div key={index} style={{ marginBottom: '4px' }}>
+                    • {shift.supervisorName || 'Supervisor'} - {shift.shiftType} (Started: {new Date(shift.shiftStart).toLocaleTimeString()})
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ fontSize: '48px', opacity: '0.8' }}>
+              🔄
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Filters Section */}
       <div style={{
         background: '#f8f9fa',

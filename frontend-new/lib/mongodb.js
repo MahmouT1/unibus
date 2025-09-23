@@ -1,40 +1,21 @@
-import mongoose from 'mongoose';
+import { MongoClient } from 'mongodb';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/student-portal';
+const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
+const options = {};
 
-if (!MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
+let client;
+let clientPromise;
+
+if (!global._mongoClientPromise) {
+  client = new MongoClient(uri, options);
+  global._mongoClientPromise = client.connect();
 }
+clientPromise = global._mongoClientPromise;
 
-let cached = global.mongoose;
+export default clientPromise;
 
-if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
+export async function connectToDatabase() {
+  const client = await clientPromise;
+  const db = client.db('student-portal');
+  return { client, db };
 }
-
-async function connectDB() {
-  try {
-    if (cached.conn) {
-      return cached.conn;
-    }
-
-    if (!cached.promise) {
-      const opts = {
-        bufferCommands: false,
-      };
-
-      cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-        return mongoose;
-      });
-    }
-
-    cached.conn = await cached.promise;
-    return cached.conn;
-  } catch (e) {
-    cached.promise = null;
-    console.error('MongoDB connection error:', e);
-    throw e;
-  }
-}
-
-export default connectDB;

@@ -1,44 +1,26 @@
 import { NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/mongodb-simple-connection';
 
 export async function DELETE(request, { params }) {
   try {
     const { id } = params;
-    const db = await getDatabase();
-    const attendanceCollection = db.collection('attendance');
-
-    // Find the attendance record by _id
-    const attendanceRecord = await attendanceCollection.findOne({ _id: id });
-
-    if (!attendanceRecord) {
-      return NextResponse.json(
-        { success: false, message: 'Attendance record not found' },
-        { status: 404 }
-      );
-    }
-
-    // Delete the attendance record
-    const result = await attendanceCollection.deleteOne({ _id: id });
-
-    if (result.deletedCount === 0) {
-      return NextResponse.json(
-        { success: false, message: 'Failed to delete attendance record' },
-        { status: 500 }
-      );
-    }
-
-    console.log(`Deleted attendance record: ${id}`);
-
-    return NextResponse.json({
-      success: true,
-      message: 'Attendance record deleted successfully'
+    
+    console.log('🔄 Proxying delete attendance request to backend...');
+    
+    // Forward request to backend
+    const backendResponse = await fetch(`http://localhost:3001/api/attendance/delete/${id}`, {
+      method: 'DELETE'
     });
-
+    const data = await backendResponse.json();
+    
+    console.log('📡 Backend delete attendance response:', backendResponse.status, data);
+    
+    return NextResponse.json(data, { status: backendResponse.status });
+    
   } catch (error) {
-    console.error('Delete attendance error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Failed to delete attendance record' },
-      { status: 500 }
-    );
+    console.error('❌ Delete attendance proxy error:', error);
+    return NextResponse.json({
+      success: false,
+      message: 'Delete attendance proxy server error'
+    }, { status: 500 });
   }
 }

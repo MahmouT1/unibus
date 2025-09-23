@@ -40,23 +40,12 @@ export async function POST(request) {
       }
     }
     
-    // Fallback to mock data if still no data
+    // Return error if no student data found
     if (!studentData) {
-      studentData = {
-        id: 'student-id-123',
-        studentId: '2024001',
-        fullName: 'Ahmed Hassan',
-        email: 'ahmed.hassan@student.edu',
-        phoneNumber: '123-456-7890',
-        college: 'Engineering',
-        grade: 'first-year',
-        major: 'Computer Science',
-        address: {
-          streetAddress: '123 Main St',
-          buildingNumber: 'Apt 101',
-          fullAddress: 'Cairo, Egypt'
-        }
-      };
+      return NextResponse.json({
+        success: false,
+        message: 'Student not found'
+      }, { status: 404 });
     }
 
     // Generate QR code data with complete student information

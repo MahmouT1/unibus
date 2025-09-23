@@ -16,18 +16,18 @@ const nextConfig = {
         headers: [
           {
             key: 'Permissions-Policy',
-            value: 'camera=*, microphone=*, geolocation=*'
+            value: 'camera=(self), microphone=(self), geolocation=(self)'
           },
           {
-            key: 'Feature-Policy',
-            value: 'camera *; microphone *; geolocation *'
+            key: 'Content-Security-Policy',
+            value: "connect-src 'self' http://localhost:3001 https://localhost:3001 ws://localhost:3001 wss://localhost:3001;"
           }
         ]
       }
     ];
   },
   experimental: {
-    https: true
+    // Remove invalid https option - use npm run dev --experimental-https instead
   }
 };
 

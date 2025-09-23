@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backend Status Check</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: 600;
+        }
+        .online {
+            background: #f0fff4;
+            color: #22543d;
+            border: 2px solid #48bb78;
+        }
+        .offline {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 2px solid #e53e3e;
+        }
+        .loading {
+            background: #f0f9ff;
+            color: #1e40af;
+            border: 2px solid #3b82f6;
+        }
+        button {
+            background: #4299e1;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #3182ce;
+        }
+        .success {
+            background: #48bb78;
+        }
+        .error {
+            background: #e53e3e;
+        }
+        .info {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-size: 14px;
+            color: #4a5568;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Backend Status Check</h1>
+        
+        <div id="backendStatus" class="status loading">
+            🔍 Checking backend server...
+        </div>
+        
+        <div id="databaseStatus" class="status loading">
+            🔍 Checking database connection...
+        </div>
+        
+        <button onclick="checkBackend()">🔄 Refresh Status</button>
+        <button onclick="testLogin()" class="success">🔐 Test Login</button>
+        
+        <div class="info">
+            <strong>Expected URLs:</strong><br>
+            Backend: http://localhost:3001<br>
+            Frontend: http://localhost:3000<br>
+            Health: http://localhost:3001/health
+        </div>
+        
+        <div id="testResult" style="margin-top: 20px;"></div>
+        
+        <div style="margin-top: 20px;">
+            <button onclick="openBackendHealth()" style="background: #805ad5;">
+                🏥 Open Backend Health
+            </button>
+            <button onclick="openLogin()" style="background: #48bb78;">
+                🚪 Go to Login
+            </button>
+        </div>
+    </div>
+
+    <script>
+        async function checkBackend() {
+            const backendStatus = document.getElementById('backendStatus');
+            const databaseStatus = document.getElementById('databaseStatus');
+            
+            // Check backend server
+            try {
+                const response = await fetch('http://localhost:3001/health');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    backendStatus.className = 'status online';
+                    backendStatus.innerHTML = '✅ Backend Server: ONLINE<br>Port: 3001';
+                    
+                    if (data.database === 'Connected') {
+                        databaseStatus.className = 'status online';
+                        databaseStatus.innerHTML = '✅ Database: CONNECTED<br>MongoDB Ready';
+                    } else {
+                        databaseStatus.className = 'status offline';
+                        databaseStatus.innerHTML = '❌ Database: DISCONNECTED<br>Check MongoDB';
+                    }
+                } else {
+                    backendStatus.className = 'status offline';
+                    backendStatus.innerHTML = '❌ Backend Server: ERROR<br>Check server logs';
+                }
+            } catch (error) {
+                backendStatus.className = 'status offline';
+                backendStatus.innerHTML = '❌ Backend Server: OFFLINE<br>Not running on port 3001';
+                
+                databaseStatus.className = 'status offline';
+                databaseStatus.innerHTML = '❌ Database: UNKNOWN<br>Backend not accessible';
+            }
+        }
+        
+        async function testLogin() {
+            const testResult = document.getElementById('testResult');
+            testResult.innerHTML = '<div class="status loading">🧪 Testing login API...</div>';
+            
+            try {
+                const response = await fetch('http://localhost:3001/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'admin@unibus.edu',
+                        password: 'admin123',
+                        role: 'admin'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    testResult.innerHTML = '<div class="status online">✅ Login API: WORKING<br>Test login successful!</div>';
+                } else {
+                    testResult.innerHTML = '<div class="status offline">❌ Login API: FAILED<br>' + data.message + '</div>';
+                }
+            } catch (error) {
+                testResult.innerHTML = '<div class="status offline">❌ Login API: ERROR<br>Cannot reach backend</div>';
+            }
+        }
+        
+        function openBackendHealth() {
+            window.open('http://localhost:3001/health', '_blank');
+        }
+        
+        function openLogin() {
+            window.location.href = '/auth';
+        }
+        
+        // Auto-check on load
+        window.addEventListener('load', () => {
+            checkBackend();
+            
+            // Auto-refresh every 5 seconds
+            setInterval(checkBackend, 5000);
+        });
+    </script>
+</body>
+</html>

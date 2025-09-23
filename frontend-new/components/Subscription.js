@@ -23,20 +23,20 @@ const Subscription = () => {
   const fetchSubscription = async () => {
     try {
       setLoading(true);
-      // Mock subscription data for now
-      const mockSubscription = {
-        id: 'sub_123',
-        plan: 'Basic',
-        status: 'active',
-        startDate: '2024-01-01',
-        endDate: '2024-12-31',
-        price: 50,
-        features: ['Transportation', 'Support', 'Basic Features']
-      };
-      setSubscription(mockSubscription);
+      // Fetch real subscription data from API
+      const response = await fetch('/api/subscription/current');
+      const data = await response.json();
+      
+      if (data.success) {
+        setSubscription(data.subscription);
+      } else {
+        setSubscription(null);
+        setError(data.message || 'No subscription found');
+      }
     } catch (error) {
       console.error('Failed to fetch subscription:', error);
       setError('Failed to load subscription data');
+      setSubscription(null);
     } finally {
       setLoading(false);
     }

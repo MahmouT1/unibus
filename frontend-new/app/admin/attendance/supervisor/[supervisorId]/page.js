@@ -21,7 +21,7 @@ export default function SupervisorAttendancePage({ params }) {
       
       // Only allow admin access to this page
       if (parsedUser.role !== 'admin') {
-        router.push('/login');
+        router.push('/auth');
         return;
       }
     } else {

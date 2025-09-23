@@ -1,8 +1,19 @@
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import './Dashboard.css';
 
 const Dashboard = () => {
+  const router = useRouter();
   const [user, setUser] = useState(null);
+  const [dashboardData, setDashboardData] = useState({
+    totalStudents: 0,
+    totalAttendance: 0,
+    activeShifts: 0,
+    todayAttendance: 0,
+    recentActivity: []
+  });
+  const [loading, setLoading] = useState(true);
+  const [shiftIndicator, setShiftIndicator] = useState(null);
 
   console.log('Dashboard component rendering');
 
@@ -13,21 +24,226 @@ const Dashboard = () => {
       if (userData) {
         setUser(JSON.parse(userData));
       }
+      loadDashboardData();
+      
+      // Auto-refresh shift data every 30 seconds
+      const interval = setInterval(() => {
+        loadDashboardData();
+      }, 30000);
+      
+      return () => clearInterval(interval);
     }
   }, []);
+
+  const handleLogout = () => {
+    // Clear all stored data
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('student');
+    sessionStorage.clear();
+    
+    // Redirect to login page
+    router.push('/auth');
+  };
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      // Load students count
+      const studentsResponse = await fetch('/api/students/profile-simple?admin=true');
+      const studentsData = await studentsResponse.json();
+      
+      // Load attendance records
+      const attendanceResponse = await fetch('/api/attendance/all-records?limit=50');
+      const attendanceData = await attendanceResponse.json();
+      
+      // Load shifts
+      const shiftsResponse = await fetch('/api/shifts?limit=20');
+      const shiftsData = await shiftsResponse.json();
+      
+      // Calculate stats
+      const totalStudents = studentsData.success ? Object.keys(studentsData.students || {}).length : 0;
+      const totalAttendance = attendanceData.success ? attendanceData.pagination.totalRecords : 0;
+      const activeShifts = shiftsData.success ? shiftsData.shifts.filter(shift => shift.status === 'open').length : 0;
+      
+      // Update shift indicator
+      if (shiftsData.success && shiftsData.shifts && shiftsData.shifts.length > 0) {
+        const openShifts = shiftsData.shifts.filter(shift => shift.status === 'open');
+        if (openShifts.length > 0) {
+          setShiftIndicator({
+            isActive: true,
+            count: openShifts.length,
+            shifts: openShifts
+          });
+        } else {
+          setShiftIndicator(null);
+        }
+      } else {
+        setShiftIndicator(null);
+      }
+      const todayAttendance = attendanceData.success ? 
+        attendanceData.records.filter(record => 
+          new Date(record.scanTime).toDateString() === new Date().toDateString()
+        ).length : 0;
+      
+      const recentActivity = attendanceData.success ? 
+        attendanceData.records.slice(0, 5).map(record => ({
+          student: record.studentName,
+          time: new Date(record.scanTime).toLocaleString(),
+          location: record.location
+        })) : [];
+
+      setDashboardData({
+        totalStudents,
+        totalAttendance,
+        activeShifts,
+        todayAttendance,
+        recentActivity
+      });
+      
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
   
+  if (loading) {
+    return (
+      <div className="dashboard" style={{ padding: '2rem', textAlign: 'center' }}>
+        <div style={{ fontSize: '1.5rem', color: '#6b7280' }}>Loading dashboard data...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="dashboard" style={{ padding: '2rem' }}>
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '0.5rem' }}>Dashboard</h1>
-        <p style={{ color: '#6b7280', margin: 0 }}>Manage your travel administration system</p>
+      <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '0.5rem' }}>Admin Dashboard</h1>
+          <p style={{ color: '#6b7280', margin: 0 }}>Manage your student transportation system</p>
+          {user && (
+            <p style={{ color: '#4a5568', margin: '10px 0 0 0' }}>Welcome, {user.email}! Role: {user.role}</p>
+          )}
+        </div>
+        
+        {/* Logout Button */}
+        <button 
+          onClick={handleLogout}
+          style={{
+            background: 'linear-gradient(135deg, #e53e3e, #c53030)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            padding: '12px 20px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '14px',
+            fontWeight: '600',
+            transition: 'all 0.3s ease',
+            boxShadow: '0 4px 12px rgba(229, 62, 62, 0.3)'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 6px 16px rgba(229, 62, 62, 0.4)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(229, 62, 62, 0.3)';
+          }}
+        >
+          <span>🚪</span>
+          <span>Logout</span>
+        </button>
       </div>
-      <div style={{ background: '#e5f3ff', padding: '20px', borderRadius: '8px', margin: '20px 0' }}>
-        <h3>Dashboard Content</h3>
-        <p>This is the main dashboard content area.</p>
-        <p>Current time: {new Date().toLocaleString()}</p>
-        {user && (
-          <p>Welcome, {user.email}! Role: {user.role}</p>
+
+      {/* Shift Indicator - Large Green Box */}
+      {shiftIndicator && shiftIndicator.isActive && (
+        <div style={{
+          background: 'linear-gradient(135deg, #10b981, #059669)',
+          color: 'white',
+          padding: '20px',
+          borderRadius: '12px',
+          marginBottom: '30px',
+          boxShadow: '0 8px 25px rgba(16, 185, 129, 0.3)',
+          border: '2px solid #10b981',
+          animation: 'pulse 2s infinite'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h2 style={{ margin: '0 0 8px 0', fontSize: '24px', fontWeight: 'bold' }}>
+                🟢 ACTIVE SHIFTS DETECTED
+              </h2>
+              <p style={{ margin: '0', fontSize: '16px', opacity: '0.9' }}>
+                {shiftIndicator.count} supervisor{shiftIndicator.count > 1 ? 's' : ''} currently working
+              </p>
+              <div style={{ marginTop: '10px', fontSize: '14px', opacity: '0.8' }}>
+                {shiftIndicator.shifts.map((shift, index) => (
+                  <div key={index} style={{ marginBottom: '4px' }}>
+                    • {shift.supervisorName || 'Supervisor'} - {shift.shiftType || 'Shift'} (Started: {new Date(shift.shiftStart || shift.startTime).toLocaleTimeString()})
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ fontSize: '48px', opacity: '0.8' }}>
+              🔄
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Statistics Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+        <div style={{ background: '#f0fff4', border: '2px solid #48bb78', borderRadius: '12px', padding: '20px' }}>
+          <h3 style={{ color: '#22543d', margin: '0 0 10px 0', fontSize: '1.5rem' }}>👥 Total Students</h3>
+          <p style={{ color: '#2d3748', fontSize: '2rem', fontWeight: 'bold', margin: 0 }}>{dashboardData.totalStudents}</p>
+        </div>
+        
+        <div style={{ background: '#f0f9ff', border: '2px solid #3b82f6', borderRadius: '12px', padding: '20px' }}>
+          <h3 style={{ color: '#1e40af', margin: '0 0 10px 0', fontSize: '1.5rem' }}>📅 Total Attendance</h3>
+          <p style={{ color: '#2d3748', fontSize: '2rem', fontWeight: 'bold', margin: 0 }}>{dashboardData.totalAttendance}</p>
+        </div>
+        
+        <div style={{ background: '#fff5f5', border: '2px solid #ed8936', borderRadius: '12px', padding: '20px' }}>
+          <h3 style={{ color: '#c05621', margin: '0 0 10px 0', fontSize: '1.5rem' }}>⏰ Active Shifts</h3>
+          <p style={{ color: '#2d3748', fontSize: '2rem', fontWeight: 'bold', margin: 0 }}>{dashboardData.activeShifts}</p>
+        </div>
+        
+        <div style={{ background: '#f0fff4', border: '2px solid #48bb78', borderRadius: '12px', padding: '20px' }}>
+          <h3 style={{ color: '#22543d', margin: '0 0 10px 0', fontSize: '1.5rem' }}>📊 Today's Attendance</h3>
+          <p style={{ color: '#2d3748', fontSize: '2rem', fontWeight: 'bold', margin: 0 }}>{dashboardData.todayAttendance}</p>
+        </div>
+      </div>
+
+      {/* Recent Activity */}
+      <div style={{ background: '#f7fafc', border: '2px solid #e2e8f0', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
+        <h3 style={{ color: '#2d3748', margin: '0 0 15px 0' }}>📈 Recent Activity</h3>
+        {dashboardData.recentActivity.length > 0 ? (
+          <div>
+            {dashboardData.recentActivity.map((activity, index) => (
+              <div key={index} style={{ 
+                background: 'white', 
+                border: '1px solid #e2e8f0', 
+                borderRadius: '8px', 
+                padding: '15px', 
+                margin: '10px 0',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <div>
+                  <strong>{activity.student}</strong>
+                  <div style={{ color: '#6b7280', fontSize: '0.9rem' }}>{activity.location}</div>
+                </div>
+                <div style={{ color: '#4a5568', fontSize: '0.9rem' }}>{activity.time}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p style={{ color: '#6b7280', textAlign: 'center', padding: '20px' }}>No recent activity</p>
         )}
       </div>
 

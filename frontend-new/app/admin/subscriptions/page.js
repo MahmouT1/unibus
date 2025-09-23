@@ -72,25 +72,50 @@ export default function AdminSubscriptionsPage() {
   const fetchData = async (showMessage = false) => {
     try {
       setLoading(true);
-      const subscriptionsResponse = await fetch('/api/subscription/payment?admin=true');
-      const subscriptionsResult = await subscriptionsResponse.json();
+      console.log('🔄 Fetching subscription management data...');
+      
+      // First, let's try to fetch students directly
+      console.log('👥 Fetching students...');
       const studentsResponse = await fetch('/api/students/profile-simple?admin=true');
       const studentsResult = await studentsResponse.json();
-
-      if (subscriptionsResult.success) {
-        setSubscriptions(subscriptionsResult.subscriptions || []);
-      } else {
-        console.error('Failed to fetch subscriptions:', subscriptionsResult.message);
-        setSubscriptions([]);
-      }
-
-      if (studentsResult.success) {
-        const studentsArray = studentsResult.students ? Object.values(studentsResult.students) : [];
+      
+      console.log('📊 Students API response:', studentsResult);
+      console.log('📊 Students API response type:', typeof studentsResult);
+      console.log('📊 Students API response success:', studentsResult.success);
+      console.log('📊 Students API response students:', studentsResult.students);
+      console.log('📊 Students API response students type:', typeof studentsResult.students);
+      
+      if (studentsResult.success && studentsResult.students) {
+        const studentsArray = Object.values(studentsResult.students);
         const validStudents = studentsArray.filter(student => student && student.email);
+        console.log(`✅ Loaded ${validStudents.length} students`);
+        console.log('📋 Sample student data:', validStudents.slice(0, 2));
         setStudents(validStudents);
       } else {
-        console.error('Failed to fetch students:', studentsResult.message);
+        console.error('❌ Failed to fetch students:', studentsResult);
+        console.error('❌ Students API response:', studentsResult);
+        // Try to show some fallback data or at least show that we tried
         setStudents([]);
+      }
+
+      // Then fetch subscriptions
+      console.log('💳 Fetching subscriptions...');
+      const subscriptionsResponse = await fetch('/api/subscription/payment?admin=true');
+      const subscriptionsResult = await subscriptionsResponse.json();
+      
+      console.log('📊 Subscriptions API response:', subscriptionsResult);
+      console.log('📊 Subscriptions API response type:', typeof subscriptionsResult);
+      console.log('📊 Subscriptions API response success:', subscriptionsResult.success);
+      console.log('📊 Subscriptions API response subscriptions:', subscriptionsResult.subscriptions);
+      console.log('📊 Subscriptions API response subscriptions type:', typeof subscriptionsResult.subscriptions);
+      
+      if (subscriptionsResult.success) {
+        setSubscriptions(subscriptionsResult.subscriptions || []);
+        console.log(`✅ Loaded ${subscriptionsResult.subscriptions?.length || 0} subscriptions`);
+      } else {
+        console.error('❌ Failed to fetch subscriptions:', subscriptionsResult);
+        console.error('❌ Subscriptions API response:', subscriptionsResult);
+        setSubscriptions([]);
       }
 
       if (showMessage) {
@@ -98,7 +123,7 @@ export default function AdminSubscriptionsPage() {
         setTimeout(() => setRefreshMessage(''), 3000);
       }
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('❌ Error fetching data:', error);
       setSubscriptions([]);
       setStudents([]);
       if (showMessage) {
@@ -126,6 +151,18 @@ export default function AdminSubscriptionsPage() {
       payments: subscription?.payments || []
     };
   });
+
+  // Force display all students even if no subscriptions
+  console.log('🔍 Combined data before filtering:', combinedData.length);
+  console.log('🔍 Students count:', students.length);
+  console.log('🔍 Subscriptions count:', subscriptions.length);
+
+  // Debug logging
+  console.log('🔍 Subscription Management Debug:');
+  console.log('👥 Students count:', students.length);
+  console.log('💳 Subscriptions count:', subscriptions.length);
+  console.log('🔧 Combined data count:', combinedData.length);
+  console.log('📋 Sample combined data:', combinedData.slice(0, 2));
 
   const filteredData = combinedData.filter(item => {
     if (!item.email) {
@@ -222,52 +259,82 @@ export default function AdminSubscriptionsPage() {
               Manage student subscriptions and track payments
             </p>
           </div>
-          <button
-            onClick={() => fetchData(true)}
-            disabled={loading}
-            style={{
-              padding: '12px 20px',
-              backgroundColor: loading ? '#9ca3af' : '#3b82f6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s ease',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-            onMouseOver={(e) => {
-              if (!loading) {
-                e.target.style.backgroundColor = '#2563eb';
-              }
-            }}
-            onMouseOut={(e) => {
-              if (!loading) {
-                e.target.style.backgroundColor = '#3b82f6';
-              }
-            }}
-          >
-            {loading ? (
-              <>
-                <div style={{
-                  width: '16px',
-                  height: '16px',
-                  border: '2px solid rgba(255,255,255,0.3)',
-                  borderTop: '2px solid white',
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite'
-                }}></div>
-                Loading...
-              </>
-            ) : (
-              <>
-                🔄 Refresh Data
-              </>
-            )}
-          </button>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              onClick={() => fetchData(true)}
+              disabled={loading}
+              style={{
+                padding: '12px 20px',
+                backgroundColor: loading ? '#9ca3af' : '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+              onMouseOver={(e) => {
+                if (!loading) {
+                  e.target.style.backgroundColor = '#2563eb';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (!loading) {
+                  e.target.style.backgroundColor = '#3b82f6';
+                }
+              }}
+            >
+              {loading ? (
+                <>
+                  <div style={{
+                    width: '16px',
+                    height: '16px',
+                    border: '2px solid rgba(255,255,255,0.3)',
+                    borderTop: '2px solid white',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }}></div>
+                  Loading...
+                </>
+              ) : (
+                <>
+                  🔄 Refresh Data
+                </>
+              )}
+            </button>
+            
+            <button
+              onClick={() => {
+                console.log('🔍 Manual Debug - Current State:');
+                console.log('Students:', students);
+                console.log('Subscriptions:', subscriptions);
+                console.log('Combined Data:', combinedData);
+                console.log('Sorted Data:', sortedData);
+                console.log('Search Term:', searchTerm);
+                console.log('Status Filter:', statusFilter);
+              }}
+              style={{
+                padding: '12px 20px',
+                backgroundColor: '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              🔍 Debug Console
+            </button>
+          </div>
         </div>
 
         {/* Refresh Message */}
@@ -361,6 +428,7 @@ export default function AdminSubscriptionsPage() {
               Total: {sortedData.length}
             </div>
           </div>
+          
         </div>
 
         {/* Table */}

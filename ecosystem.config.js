@@ -1,0 +1,1 @@
+module.exports = { apps: [ { name:  unibus-backend, cwd: ./backend-new, script: node, args: server.js, env: { NODE_ENV: production, PORT: 3001 } }, { name: unibus-frontend, cwd: ./frontend-new, script: npm, args: start, env: { NODE_ENV: production, PORT: 3000 } } ] }
