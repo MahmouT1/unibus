@@ -232,27 +232,29 @@ export async function POST(request) {
     let lastAttendance = null;
 
     try {
-      const attendanceResponse = await fetch(`${backendUrl.replace(/\/$/, '')}/api/attendance/all-records?limit=5000&page=1`, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
+      const url = `${backendUrl.replace(/\/$/, '')}/api/attendance/all-records?limit=10000&page=1`;
+      const attendanceResponse = await fetch(url, {
+        headers: { 'Content-Type': 'application/json' }
       });
       
       if (attendanceResponse.ok) {
         const attendanceData = await attendanceResponse.json();
-        if (attendanceData.success && attendanceData.records) {
-          // Filter records for this specific student
-          const studentEmail = (student.email || '').toLowerCase();
-          const studentRecords = attendanceData.records.filter(record => {
-            const recordEmail = (record.studentEmail || record.email || '').toLowerCase();
-            const recordStudentId = record.studentId;
-            const recordStudentName = (record.studentName || '').toLowerCase();
-            const studentName = (student.fullName || student.name || '').toLowerCase();
+        const allRecords = attendanceData.records || [];
+        if (attendanceData.success && allRecords.length >= 0) {
+          // Filter records for this specific student - robust matching
+          const studentEmail = (student.email || '').toLowerCase().trim();
+          const studentName = (student.fullName || student.name || '').toLowerCase().trim();
+          const studentStuId = (student.studentId || '').toString();
+          const studentRecords = allRecords.filter(record => {
+            const recordEmail = (record.studentEmail || record.email || '').toLowerCase().trim();
+            const recordStudentId = (record.studentId || '').toString();
+            const recordStudentName = (record.studentName || '').toLowerCase().trim();
             
-            // Match by email, student ID, or name
-            const emailMatch = recordEmail === studentEmail;
-            const idMatch = recordStudentId === student.studentId && student.studentId !== 'N/A';
-            const nameMatch = recordStudentName && studentName && recordStudentName.includes(studentName);
+            const emailMatch = studentEmail && recordEmail && recordEmail === studentEmail;
+            const idMatch = studentStuId && studentStuId !== 'N/A' && recordStudentId && recordStudentId === studentStuId;
+            const nameMatch = studentName && recordStudentName && (
+              recordStudentName.includes(studentName) || studentName.includes(recordStudentName)
+            );
             
             return emailMatch || idMatch || nameMatch;
           });

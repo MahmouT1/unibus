@@ -31,7 +31,8 @@ const StudentSearchPage = () => {
     open: false,
     student: null,
     records: [],
-    loading: false
+    loading: false,
+    error: null
   });
 
   const router = useRouter();
@@ -85,27 +86,28 @@ const StudentSearchPage = () => {
   const activeStudents = students.filter(s => (s.attendanceCount || 0) > 0).length;
 
   const openAttendanceModal = async (student) => {
-    setAttendanceModal({ open: true, student, records: [], loading: true });
+    if (!student || !student._id) return;
+    setAttendanceModal({ open: true, student, records: [], loading: true, error: null });
     try {
       const res = await fetch('/api/students/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ _id: student._id, email: student.email })
+        body: JSON.stringify({ _id: student._id, email: student.email, studentId: student.studentId })
       });
       const data = await res.json();
       if (data.success && data.data) {
         const recs = data.data.attendance?.records || [];
-        setAttendanceModal({ open: true, student, records: recs, loading: false });
+        setAttendanceModal({ open: true, student, records: recs, loading: false, error: null });
       } else {
-        setAttendanceModal(prev => ({ ...prev, records: [], loading: false }));
+        setAttendanceModal(prev => ({ ...prev, records: [], loading: false, error: data.message || 'فشل تحميل البيانات' }));
       }
     } catch (err) {
-      setAttendanceModal(prev => ({ ...prev, records: [], loading: false }));
+      setAttendanceModal(prev => ({ ...prev, records: [], loading: false, error: 'حدث خطأ في الاتصال' }));
     }
   };
 
   const closeAttendanceModal = () => {
-    setAttendanceModal({ open: false, student: null, records: [], loading: false });
+    setAttendanceModal({ open: false, student: null, records: [], loading: false, error: null });
   };
 
   return (
@@ -238,9 +240,11 @@ const StudentSearchPage = () => {
                     <td>
                       <div className="actions">
                         <button
+                          type="button"
                           className="edit-btn"
-                          onClick={() => openAttendanceModal(student)}
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); openAttendanceModal(student); }}
                           title="سجل الحضور"
+                          style={{ cursor: 'pointer', padding: '8px 12px', background: '#e3f2fd', border: 'none', borderRadius: 6 }}
                         >
                           👁
                         </button>
@@ -338,6 +342,10 @@ const StudentSearchPage = () => {
               {attendanceModal.loading ? (
                 <div style={{ padding: 60, textAlign: 'center', color: '#666' }}>
                   جاري التحميل...
+                </div>
+              ) : attendanceModal.error ? (
+                <div style={{ padding: 60, textAlign: 'center', color: '#c62828' }}>
+                  {attendanceModal.error}
                 </div>
               ) : attendanceModal.records.length === 0 ? (
                 <div style={{ padding: 60, textAlign: 'center', color: '#666' }}>
