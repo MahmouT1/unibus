@@ -252,31 +252,110 @@
   text-transform: capitalize;
 }
 
-.attendance-badge {
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-align: center;
-  min-width: 80px;
-  display: inline-block;
-}
-
-.attendance-badge.has-attendance {
-  background: #e8f5e8;
-  color: #2e7d32;
-}
-
-.attendance-badge.no-attendance {
-  background: #ffebee;
-  color: #c62828;
-}
-
-/* Status */
-.status-cell {
+.attendance-count {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+}
+
+.attendance-badge {
+  padding: 6px 14px;
+  border-radius: 25px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: center;
+  min-width: 70px;
+  display: inline-block;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.attendance-badge::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.6s ease;
+}
+
+.attendance-badge:hover::before {
+  left: 100%;
+}
+
+/* No attendance - Red */
+.attendance-badge.no-attendance {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  color: #c62828;
+  border: 2px solid #ef5350;
+}
+
+/* Low attendance (1-5 days) - Orange */
+.attendance-badge.low-attendance {
+  background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+  color: #ef6c00;
+  border: 2px solid #ff9800;
+}
+
+/* Medium attendance (6-15 days) - Yellow/Green */
+.attendance-badge.medium-attendance {
+  background: linear-gradient(135deg, #f9fbe7 0%, #f0f4c3 100%);
+  color: #689f38;
+  border: 2px solid #8bc34a;
+}
+
+/* High attendance (16-30 days) - Green */
+.attendance-badge.high-attendance {
+  background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
+  color: #2e7d32;
+  border: 2px solid #4caf50;
+}
+
+/* Very high attendance (31+ days) - Blue/Green */
+.attendance-badge.very-high-attendance {
+  background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%);
+  color: #00695c;
+  border: 2px solid #009688;
+  animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 0 0 0 rgba(0, 150, 136, 0.4);
+  }
+  50% {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 0 0 8px rgba(0, 150, 136, 0);
+  }
+}
+
+/* Hover effects */
+.attendance-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.attendance-badge.no-attendance:hover {
+  box-shadow: 0 4px 12px rgba(198, 40, 40, 0.3);
+}
+
+.attendance-badge.low-attendance:hover {
+  box-shadow: 0 4px 12px rgba(239, 108, 0, 0.3);
+}
+
+.attendance-badge.medium-attendance:hover {
+  box-shadow: 0 4px 12px rgba(104, 159, 56, 0.3);
+}
+
+.attendance-badge.high-attendance:hover {
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
+}
+
+.attendance-badge.very-high-attendance:hover {
+  box-shadow: 0 4px 12px rgba(0, 105, 92, 0.3);
 }
 
 .status-badge {

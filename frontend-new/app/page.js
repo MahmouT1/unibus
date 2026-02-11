@@ -34,16 +34,28 @@ export default function HomePage() {
           }}>
             {/* UniBus logo centered */}
             <div style={{
-              width: '92px',
-              height: '92px',
+              width: '120px',
+              height: '120px',
               margin: '0 auto 18px auto',
               borderRadius: '24px',
-              display: 'grid',
-              placeItems: 'center',
-              background: 'linear-gradient(135deg, #fee440, #ffd166)',
-              boxShadow: '0 12px 30px rgba(254, 228, 64, 0.45)'
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05))',
+              boxShadow: '0 12px 30px rgba(0, 0, 0, 0.2)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              padding: '10px'
             }}>
-              <span style={{ fontSize: '48px' }}>🚌</span>
+              <img 
+                src="/uni-bus-logo.png.jpg" 
+                alt="UniBus Logo" 
+                style={{
+                  width: '100px',
+                  height: '100px',
+                  objectFit: 'contain',
+                  borderRadius: '20px'
+                }}
+              />
             </div>
 
             <h1 style={{

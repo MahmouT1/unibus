@@ -1,122 +1,169 @@
 import { NextResponse } from 'next/server';
-import { connectToDatabase } from '../../../../lib/mongodb';
-import { Attendance } from '../../../../lib/Attendance';
+import connectDB from '../../../../lib/mongodb.js';
+import Attendance from '../../../../lib/models/Attendance.js';
+import Student from '../../../../lib/models/Student.js';
+import User from '../../../../lib/models/User.js';
 
 export async function POST(request) {
   try {
-    await connectToDatabase();
-    
     const body = await request.json();
     const { 
       studentData, 
-      appointmentSlot, 
-      stationName, 
-      stationLocation, 
-      coordinates,
-      supervisorId,
-      supervisorName 
+      supervisorId, 
+      location = 'Main Station',
+      scanMethod = 'qr-code',
+      notes = '',
+      coordinates 
     } = body;
 
-    console.log('Database attendance registration request:', {
-      studentName: studentData?.fullName,
-      studentId: studentData?.id,
-      studentEmail: studentData?.email,
-      appointmentSlot,
-      stationName
+    // Validate required fields
+    if (!studentData || !supervisorId) {
+      return NextResponse.json(
+        { success: false, message: 'Student data and supervisor ID are required' },
+        { status: 400 }
+      );
+    }
+
+    if (!studentData.studentId || !studentData.fullName || !studentData.email) {
+      return NextResponse.json(
+        { success: false, message: 'Student ID, name, and email are required' },
+        { status: 400 }
+      );
+    }
+
+    await connectDB();
+
+    // Find supervisor
+    const supervisor = await User.findById(supervisorId);
+    if (!supervisor) {
+      return NextResponse.json(
+        { success: false, message: 'Supervisor not found' },
+        { status: 404 }
+      );
+    }
+
+    // Find or create student
+    let student = await Student.findOne({ 
+      $or: [
+        { studentId: studentData.studentId },
+        { email: studentData.email }
+      ]
     });
 
-    // Ensure proper text encoding for Arabic names
-    const sanitizedStudentData = {
-      ...studentData,
-      fullName: studentData.fullName || 'Unknown Student',
-      college: studentData.college || 'Not specified',
-      major: studentData.major || 'Not specified'
-    };
+    if (!student) {
+      // Create new student if not exists
+      student = new Student({
+        studentId: studentData.studentId,
+        fullName: studentData.fullName,
+        email: studentData.email,
+        phoneNumber: studentData.phoneNumber || '',
+        college: studentData.college || 'Unknown',
+        major: studentData.major || 'Unknown',
+        grade: studentData.grade || 'first-year',
+        address: studentData.address || '',
+        profilePhoto: studentData.profilePhoto || null
+      });
+      await student.save();
+    }
 
-    // Check if attendance already exists for today and this slot
+    // Check for duplicate attendance today
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
-    // Check for duplicates by EXACT studentId AND email combination
     const existingAttendance = await Attendance.findOne({
-      studentId: sanitizedStudentData.id,
-      studentEmail: sanitizedStudentData.email,
+      studentId: student._id,
       date: {
-        $gte: today,
-        $lt: tomorrow
-      },
-      appointmentSlot: appointmentSlot || 'first'
+        $gte: startOfDay,
+        $lt: endOfDay
+      }
     });
 
     if (existingAttendance) {
-      console.log('Duplicate attendance found in database:', {
-        existingRecord: {
-          id: existingAttendance._id,
-          studentId: existingAttendance.studentId,
-          studentEmail: existingAttendance.studentEmail,
-          studentName: existingAttendance.studentName,
-          date: existingAttendance.date,
-          slot: existingAttendance.appointmentSlot
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: 'Student has already been marked present today',
+          existingAttendance: {
+            time: existingAttendance.checkInTime,
+            location: existingAttendance.location
+          }
         },
-        newRequest: {
-          studentId: sanitizedStudentData.id,
-          studentEmail: sanitizedStudentData.email,
-          studentName: sanitizedStudentData.fullName,
-          slot: appointmentSlot
-        }
-      });
-      
-      return NextResponse.json({
-        success: false,
-        message: 'Attendance already registered for this slot today',
-        attendance: existingAttendance
-      }, { status: 400 });
+        { status: 409 }
+      );
     }
 
-    // Create new attendance record in database
+    // Create attendance record
     const attendanceRecord = new Attendance({
-      studentId: sanitizedStudentData.id,
-      studentName: sanitizedStudentData.fullName,
-      studentEmail: sanitizedStudentData.email,
-      studentPhone: sanitizedStudentData.phoneNumber,
-      studentCollege: sanitizedStudentData.college,
-      studentGrade: sanitizedStudentData.grade,
-      studentMajor: sanitizedStudentData.major,
-      studentAddress: sanitizedStudentData.address,
-      date: new Date(),
-      status: 'Present',
-      checkInTime: new Date(),
-      appointmentSlot: appointmentSlot || 'first',
-      station: {
-        name: stationName || 'Main Gate',
-        location: stationLocation || 'University Entrance',
-        coordinates: coordinates || '30.0444,31.2357'
+      studentId: student._id,
+      studentInfo: {
+        studentId: student.studentId,
+        fullName: student.fullName,
+        email: student.email,
+        college: student.college,
+        major: student.major,
+        grade: student.grade
       },
-      qrScanned: true,
-      supervisorId: supervisorId || 'supervisor-001',
-      supervisorName: supervisorName || 'Supervisor',
-      qrData: sanitizedStudentData,
-      verified: true
+      supervisorId: supervisor._id,
+      supervisorInfo: {
+        email: supervisor.email,
+        fullName: supervisor.fullName
+      },
+      location,
+      scanMethod,
+      notes,
+      coordinates: coordinates || null,
+      deviceInfo: {
+        userAgent: request.headers.get('user-agent') || '',
+        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+      }
     });
 
     await attendanceRecord.save();
 
-    console.log('Attendance registered successfully in database:', attendanceRecord._id);
+    // Update student attendance statistics
+    const attendanceCount = await Attendance.countDocuments({ studentId: student._id });
+    const attendanceRate = Math.round((attendanceCount / 30) * 100); // Assuming 30 days max
+
+    await Student.findByIdAndUpdate(student._id, {
+      'attendanceStats.totalAttendance': attendanceCount,
+      'attendanceStats.daysRegistered': attendanceCount,
+      'attendanceStats.attendanceRate': Math.min(attendanceRate, 100),
+      'attendanceStats.remainingDays': Math.max(30 - attendanceCount, 0),
+      updatedAt: new Date()
+    });
 
     return NextResponse.json({
       success: true,
       message: 'Attendance registered successfully',
-      attendance: attendanceRecord
+      attendance: {
+        id: attendanceRecord._id,
+        studentId: student.studentId,
+        studentName: student.fullName,
+        checkInTime: attendanceRecord.checkInTime,
+        location: attendanceRecord.location,
+        status: attendanceRecord.status
+      },
+      student: {
+        id: student._id,
+        studentId: student.studentId,
+        fullName: student.fullName,
+        college: student.college,
+        major: student.major,
+        grade: student.grade,
+        attendanceStats: {
+          totalAttendance: attendanceCount,
+          attendanceRate: Math.min(attendanceRate, 100)
+        }
+      }
     });
 
   } catch (error) {
-    console.error('Database attendance registration error:', error);
+    console.error('Attendance registration error:', error);
     return NextResponse.json(
       { 
         success: false, 
-        message: 'Failed to register attendance', 
+        message: 'Failed to register attendance',
         error: error.message 
       },
       { status: 500 }

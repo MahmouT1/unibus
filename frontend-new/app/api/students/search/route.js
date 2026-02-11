@@ -66,19 +66,70 @@ export async function GET(request) {
     const students = uniqueStudents.slice(skip, skip + limit);
     console.log('Students fetched:', students.length);
 
-    // Get attendance counts for each student
-    console.log('Calculating attendance counts...');
-    const attendanceCollection = db.collection('attendance');
-    const studentsWithAttendance = await Promise.all(
-      students.map(async (student) => {
-        // Count all attendance records for this student
-        const attendanceCount = await attendanceCollection.countDocuments({
-          studentEmail: student.email
-        });
+    // Fetch attendance records ONCE from backend (use env for production/Docker)
+    const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+    let attendanceRecords = [];
+    try {
+      const attendanceResponse = await fetch(`${backendUrl.replace(/\/$/, '')}/api/attendance/all-records?limit=5000&page=1`, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (attendanceResponse.ok) {
+        const attendanceData = await attendanceResponse.json();
+        if (attendanceData.success && attendanceData.records) {
+          attendanceRecords = attendanceData.records;
+          console.log(`📊 Loaded ${attendanceRecords.length} attendance records for student count calculation`);
+        }
+      }
+    } catch (backendError) {
+      console.error('Error fetching attendance from backend:', backendError);
+    }
 
+    // Calculate attendance count per student from the fetched records
+    console.log('Calculating attendance counts per student...');
+    const studentsWithAttendance = students.map((student) => {
+      try {
+        const studentEmail = (student.email || '').toLowerCase();
+        const studentName = (student.fullName || student.name || '').toLowerCase();
+        const attendanceDates = new Set(); // أيام فريدة (طالب = مسحة واحدة/يوم)
+        
+        attendanceRecords.forEach(record => {
+          const recordEmail = (record.studentEmail || record.email || '').toLowerCase();
+          const recordStudentId = record.studentId;
+          const recordStudentName = (record.studentName || '').toLowerCase();
+          
+          const emailMatch = recordEmail === studentEmail;
+          const idMatch = recordStudentId === student.studentId && student.studentId !== 'N/A';
+          const nameMatch = recordStudentName && studentName && recordStudentName.includes(studentName);
+          
+          if (emailMatch || idMatch || nameMatch) {
+            const scanTime = record.scanTime || record.checkInTime || record.createdAt || record.timestamp;
+            if (scanTime) {
+              attendanceDates.add(new Date(scanTime).toDateString());
+            }
+          }
+        });
+        
+        const attendanceCount = attendanceDates.size;
+        return {
+            _id: student._id.toString(),
+            fullName: student.fullName || student.name || 'Unknown',
+            email: student.email || '',
+            studentId: student.studentId || 'N/A',
+            college: student.college || 'N/A',
+            major: student.major || 'N/A',
+            grade: student.grade || 'N/A',
+            phoneNumber: student.phoneNumber || 'N/A',
+            address: student.address || 'N/A',
+            profilePhoto: student.profilePhoto || '',
+            qrCode: student.qrCode || '',
+            status: student.status || 'active',
+            attendanceCount
+          };
+      } catch (error) {
+        console.error(`Error calculating attendance for student ${student._id}:`, error);
         return {
           _id: student._id.toString(),
-          fullName: student.fullName || 'Unknown',
+          fullName: student.fullName || student.name || 'Unknown',
           email: student.email || '',
           studentId: student.studentId || 'N/A',
           college: student.college || 'N/A',
@@ -89,11 +140,19 @@ export async function GET(request) {
           profilePhoto: student.profilePhoto || '',
           qrCode: student.qrCode || '',
           status: student.status || 'active',
-          attendanceCount
+          attendanceCount: 0
         };
-      })
-    );
+      }
+    });
     console.log('Attendance counts calculated for', studentsWithAttendance.length, 'students');
+
+    // Sort by attendance count (highest first), then by name
+    studentsWithAttendance.sort((a, b) => {
+      if (b.attendanceCount !== a.attendanceCount) {
+        return b.attendanceCount - a.attendanceCount;
+      }
+      return (a.fullName || '').localeCompare(b.fullName || '');
+    });
 
     // Calculate pagination info
     const totalPages = Math.ceil(totalStudents / limit);
@@ -130,18 +189,35 @@ export async function POST(request) {
     const db = await getDatabase();
     
     const body = await request.json();
-    const { studentId } = body;
+    const { studentId, _id, email } = body;
+    const lookupId = _id || studentId;
 
-    if (!studentId) {
+    if (!lookupId && !email) {
       return NextResponse.json(
-        { success: false, message: 'Student ID is required' },
+        { success: false, message: 'Student ID or email is required' },
         { status: 400 }
       );
     }
 
-    // Get student details from students collection
     const studentsCollection = db.collection('students');
-    const student = await studentsCollection.findOne({ _id: new ObjectId(studentId) });
+    const usersCollection = db.collection('users');
+    let student = null;
+
+    if (lookupId) {
+      try {
+        student = await studentsCollection.findOne({ _id: new ObjectId(lookupId) });
+        if (!student) {
+          student = await usersCollection.findOne({ _id: new ObjectId(lookupId), role: 'student' });
+        }
+      } catch (e) {}
+    }
+    if (!student && email) {
+      const em = (email || '').toLowerCase();
+      student = await studentsCollection.findOne({ email: em });
+      if (!student) {
+        student = await usersCollection.findOne({ email: em, role: 'student' });
+      }
+    }
     
     if (!student) {
       return NextResponse.json(
@@ -150,21 +226,51 @@ export async function POST(request) {
       );
     }
 
-    // Get detailed attendance records
-    const attendanceCollection = db.collection('attendance');
-    const attendanceRecords = await attendanceCollection.find({ 
-      studentEmail: student.email 
-    })
-      .sort({ scanTime: -1 })
-      .limit(50)
-      .toArray();
+    const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:3001';
+    let attendanceRecords = [];
+    let totalAttendance = 0;
+    let lastAttendance = null;
 
-    // Calculate attendance statistics
-    const totalAttendance = await attendanceCollection.countDocuments({
-      studentEmail: student.email
-    });
+    try {
+      const attendanceResponse = await fetch(`${backendUrl.replace(/\/$/, '')}/api/attendance/all-records?limit=5000&page=1`, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (attendanceResponse.ok) {
+        const attendanceData = await attendanceResponse.json();
+        if (attendanceData.success && attendanceData.records) {
+          // Filter records for this specific student
+          const studentEmail = (student.email || '').toLowerCase();
+          const studentRecords = attendanceData.records.filter(record => {
+            const recordEmail = (record.studentEmail || record.email || '').toLowerCase();
+            const recordStudentId = record.studentId;
+            const recordStudentName = (record.studentName || '').toLowerCase();
+            const studentName = (student.fullName || student.name || '').toLowerCase();
+            
+            // Match by email, student ID, or name
+            const emailMatch = recordEmail === studentEmail;
+            const idMatch = recordStudentId === student.studentId && student.studentId !== 'N/A';
+            const nameMatch = recordStudentName && studentName && recordStudentName.includes(studentName);
+            
+            return emailMatch || idMatch || nameMatch;
+          });
 
-    const lastAttendance = attendanceRecords.length > 0 ? attendanceRecords[0] : null;
+          // Sort by scan time (newest first) - return all records for full history
+          attendanceRecords = studentRecords
+            .sort((a, b) => new Date(b.scanTime || b.checkInTime) - new Date(a.scanTime || a.checkInTime));
+          
+          totalAttendance = studentRecords.length;
+          lastAttendance = attendanceRecords.length > 0 ? {
+            ...attendanceRecords[0],
+            checkInTime: attendanceRecords[0].scanTime || attendanceRecords[0].checkInTime
+          } : null;
+        }
+      }
+    } catch (backendError) {
+      console.error('Error fetching detailed attendance from backend:', backendError);
+    }
 
     return NextResponse.json({
       success: true,

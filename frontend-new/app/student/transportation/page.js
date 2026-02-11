@@ -8,6 +8,7 @@ export default function TransportationPage() {
   const [transportationData, setTransportationData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const [selectedTime, setSelectedTime] = useState('first');
   const router = useRouter();
 
   const fetchTransportationData = async () => {
@@ -15,8 +16,10 @@ export default function TransportationPage() {
       const response = await fetch('/api/transportation');
       
       if (response.ok) {
-        const data = await response.json();
-        setTransportationData(data);
+        const result = await response.json();
+        if (result.success) {
+          setTransportationData(result.data);
+        }
       } else {
         console.error('Failed to fetch transportation data:', response.status);
       }
@@ -50,34 +53,22 @@ export default function TransportationPage() {
     return () => window.removeEventListener('resize', checkMobile);
   }, [router]);
 
+  const navigateBackToPortal = () => {
+    router.push('/student/portal');
+  };
 
   if (!user) {
     return (
       <div style={{
         minHeight: '100vh',
         display: 'flex',
-        alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#f3f4f6'
+        alignItems: 'center',
+        backgroundColor: '#f8fafc'
       }}>
-        <div style={{
-          textAlign: 'center',
-          padding: '40px',
-          backgroundColor: 'white',
-          borderRadius: '12px',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
-        }}>
-          <div style={{
-            width: '50px',
-            height: '50px',
-            border: '4px solid #e2e8f0',
-            borderTop: '4px solid #3b82f6',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 20px'
-          }} />
-          <h3 style={{ margin: '0 0 10px 0', color: '#1f2937' }}>Loading...</h3>
-          <p style={{ margin: '0', color: '#6b7280' }}>Please wait while we load your transportation information.</p>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '24px', marginBottom: '16px' }}>🔐</div>
+          <p style={{ color: '#6b7280' }}>Please log in to access this page</p>
         </div>
       </div>
     );
@@ -88,28 +79,13 @@ export default function TransportationPage() {
       <div style={{
         minHeight: '100vh',
         display: 'flex',
-        alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#f3f4f6'
+        alignItems: 'center',
+        backgroundColor: '#f8fafc'
       }}>
-        <div style={{
-          textAlign: 'center',
-          padding: '40px',
-          backgroundColor: 'white',
-          borderRadius: '12px',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
-        }}>
-          <div style={{
-            width: '50px',
-            height: '50px',
-            border: '4px solid #e2e8f0',
-            borderTop: '4px solid #3b82f6',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 20px'
-          }} />
-          <h3 style={{ margin: '0 0 10px 0', color: '#1f2937' }}>Loading Transportation Data...</h3>
-          <p style={{ margin: '0', color: '#6b7280' }}>Please wait while we fetch the latest schedules.</p>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '24px', marginBottom: '16px' }}>🚌</div>
+          <p style={{ color: '#6b7280' }}>Loading transportation schedules...</p>
         </div>
       </div>
     );
@@ -118,20 +94,17 @@ export default function TransportationPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      backgroundColor: '#f8fafc',
-      padding: isMobile ? '16px' : '24px'
+      backgroundColor: '#f8fafc'
     }}>
       {/* Header */}
       <div style={{
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        borderRadius: '16px',
-        padding: isMobile ? '24px' : '32px',
-        marginBottom: '30px',
+        background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+        padding: isMobile ? '20px 16px' : '32px 24px',
         color: 'white',
         position: 'relative',
         overflow: 'hidden'
       }}>
-        {/* Background Pattern */}
+        {/* Background decoration */}
         <div style={{
           position: 'absolute',
           top: '-50%',
@@ -142,192 +115,366 @@ export default function TransportationPage() {
           pointerEvents: 'none'
         }} />
         
-        {/* Back Button */}
+        {/* Back button */}
         <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('Back button clicked - navigating to portal');
-            try {
-              router.push('/student/portal');
-            } catch (error) {
-              console.log('Router failed, using window.location');
-              window.location.href = '/student/portal';
-            }
-          }}
+          onClick={navigateBackToPortal}
           style={{
-            position: 'absolute',
-            left: isMobile ? '12px' : '20px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            background: 'rgba(255, 255, 255, 0.2)',
-            border: '1px solid rgba(255, 255, 255, 0.3)',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
             color: 'white',
-            padding: isMobile ? '8px 12px' : '10px 16px',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontSize: isMobile ? '12px' : '14px',
+            border: 'none',
+            borderRadius: '8px',
+            padding: '8px 16px',
+            fontSize: '14px',
             fontWeight: '500',
+            cursor: 'pointer',
+            marginBottom: '16px',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            transition: 'all 0.2s ease',
-            backdropFilter: 'blur(10px)',
-            zIndex: 10
+            gap: '8px',
+            transition: 'all 0.2s',
+            position: 'relative',
+            zIndex: 1
           }}
-          onMouseOver={(e) => {
-            e.target.style.background = 'rgba(255, 255, 255, 0.3)';
-            e.target.style.transform = 'translateY(-50%) scale(1.05)';
-          }}
-          onMouseOut={(e) => {
-            e.target.style.background = 'rgba(255, 255, 255, 0.2)';
-            e.target.style.transform = 'translateY(-50%) scale(1)';
-          }}
+          onMouseOver={(e) => e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'}
+          onMouseOut={(e) => e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
         >
-          <span style={{ fontSize: isMobile ? '14px' : '16px' }}>←</span>
-          <span>{isMobile ? 'Portal' : 'Back to Portal'}</span>
+          <span>←</span>
+          Back to Portal
         </button>
-
-        <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
-          <h1 style={{ margin: '0', fontSize: isMobile ? '24px' : '28px' }}>Transportation Times & Locations</h1>
-          <p style={{ margin: '5px 0 0 0', opacity: '0.9' }}>
+        
+        {/* Header content */}
+        <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
+          <h1 style={{
+            margin: '0 0 8px 0',
+            fontSize: isMobile ? '24px' : '32px',
+            fontWeight: '700'
+          }}>
+            🚌 Transportation Times & Locations
+          </h1>
+          <p style={{
+            margin: '0',
+            fontSize: isMobile ? '14px' : '16px',
+            opacity: '0.9'
+          }}>
             View bus schedules, station locations, and parking information
           </p>
         </div>
       </div>
 
       {/* Main Content */}
-      <div style={{ 
+      <div style={{
         maxWidth: '1200px',
-        margin: '0 auto'
+        margin: '0 auto',
+        padding: isMobile ? '16px' : '24px'
       }}>
         {transportationData.length === 0 ? (
+          /* No Data State */
           <div style={{
             backgroundColor: 'white',
-            borderRadius: '12px',
-            padding: isMobile ? '24px' : '30px',
+            borderRadius: '16px',
+            padding: isMobile ? '32px 16px' : '48px 32px',
             textAlign: 'center',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
+            border: '2px dashed #e5e7eb'
           }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚌</div>
-            <h2 style={{ margin: '0 0 12px 0', fontSize: '20px', color: '#1f2937' }}>
+            <div style={{ fontSize: '64px', marginBottom: '16px' }}>🚌</div>
+            <h2 style={{
+              margin: '0 0 8px 0',
+              fontSize: isMobile ? '20px' : '24px',
+              color: '#1f2937',
+              fontWeight: '600'
+            }}>
               No Transportation Schedules Available
             </h2>
-            <p style={{ margin: '0', color: '#6b7280' }}>
+            <p style={{
+              margin: '0',
+              color: '#6b7280',
+              fontSize: isMobile ? '14px' : '16px'
+            }}>
               Transportation schedules will appear here once they are added by the administrator.
             </p>
           </div>
         ) : (
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            padding: isMobile ? '24px' : '30px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-          }}>
-            <h2 style={{ margin: '0 0 20px 0', fontSize: '20px', color: '#1f2937' }}>
-              🚌 Available Transportation Schedules
-            </h2>
-            
+          <>
+            {/* Schedule Time Selector */}
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              padding: '20px',
+              marginBottom: '24px',
+              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)'
+            }}>
+              <h3 style={{
+                margin: '0 0 16px 0',
+                fontSize: '18px',
+                color: '#1f2937',
+                fontWeight: '600'
+              }}>
+                ⏰ Select Schedule Time
+              </h3>
+              
+              <div style={{
+                display: 'flex',
+                gap: '12px',
+                flexWrap: 'wrap'
+              }}>
+                <button
+                  onClick={() => setSelectedTime('first')}
+                  style={{
+                    padding: '12px 20px',
+                    backgroundColor: selectedTime === 'first' ? '#8b5cf6' : '#f3f4f6',
+                    color: selectedTime === 'first' ? 'white' : '#6b7280',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <span>🌅</span>
+                  First Appointment
+                </button>
+                
+                <button
+                  onClick={() => setSelectedTime('second')}
+                  style={{
+                    padding: '12px 20px',
+                    backgroundColor: selectedTime === 'second' ? '#8b5cf6' : '#f3f4f6',
+                    color: selectedTime === 'second' ? 'white' : '#6b7280',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <span>🌆</span>
+                  Second Appointment
+                </button>
+              </div>
+            </div>
+
+            {/* Transportation Routes */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(300px, 1fr))',
-              gap: '20px'
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(400px, 1fr))',
+              gap: '24px'
             }}>
-              {transportationData.map((schedule, index) => (
-                <div key={index} style={{
+              {transportationData.map((route, routeIndex) => (
+                <div key={route._id || routeIndex} style={{
+                  backgroundColor: 'white',
+                  borderRadius: '16px',
+                  padding: '24px',
+                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
                   border: '1px solid #e5e7eb',
-                  borderRadius: '12px',
-                  padding: '20px',
-                  transition: 'all 0.2s ease',
-                  cursor: 'pointer'
+                  transition: 'all 0.2s'
                 }}
                 onMouseOver={(e) => {
-                  e.target.style.borderColor = '#3b82f6';
-                  e.target.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.15)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
                 }}
                 onMouseOut={(e) => {
-                  e.target.style.borderColor = '#e5e7eb';
-                  e.target.style.boxShadow = 'none';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.05)';
                 }}
                 >
-                  <div style={{ marginBottom: '16px' }}>
-                    <h3 style={{ 
-                      margin: '0 0 8px 0', 
-                      fontSize: '18px', 
+                  {/* Route Header */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '20px',
+                    paddingBottom: '16px',
+                    borderBottom: '2px solid #f3f4f6'
+                  }}>
+                    <h3 style={{
+                      margin: '0',
+                      fontSize: isMobile ? '18px' : '20px',
                       color: '#1f2937',
-                      fontWeight: '600'
-                    }}>
-                      {schedule.name}
-                    </h3>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '14px' }}>🕒</span>
-                      <span style={{ fontSize: '14px', color: '#6b7280' }}>{schedule.time}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '14px' }}>📍</span>
-                      {schedule.location.startsWith('http') ? (
-                        <a 
-                          href={schedule.location} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          style={{ 
-                            fontSize: '14px', 
-                            color: '#3b82f6', 
-                            textDecoration: 'underline',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          View Location on Map
-                        </a>
-                      ) : (
-                        <span style={{ fontSize: '14px', color: '#6b7280' }}>{schedule.location}</span>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '14px' }}>🅿️</span>
-                      <span style={{ fontSize: '14px', color: '#6b7280' }}>{schedule.parking}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '14px' }}>👥</span>
-                      <span style={{ fontSize: '14px', color: '#6b7280' }}>{schedule.capacity} students</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '14px' }}>✅</span>
-                      <span style={{ fontSize: '14px', color: '#10b981', fontWeight: '500' }}>{schedule.status}</span>
-                    </div>
-                  </div>
-                  
-                  <button 
-                    onClick={() => {
-                      if (schedule.location.startsWith('http')) {
-                        window.open(schedule.location, '_blank', 'noopener,noreferrer');
-                      } else {
-                        alert('No map link available for this location');
-                      }
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '10px 16px',
-                      backgroundColor: '#3b82f6',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      cursor: 'pointer',
+                      fontWeight: '600',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
                       gap: '8px'
-                    }}
-                  >
-                    <span>🗺️</span>
-                    View on Map
-                  </button>
+                    }}>
+                      🚌 {route.routeName}
+                    </h3>
+                    
+                    <div style={{
+                      backgroundColor: '#dcfce7',
+                      color: '#166534',
+                      padding: '4px 12px',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      fontWeight: '600'
+                    }}>
+                      Active
+                    </div>
+                  </div>
+
+                  {/* Schedule Info */}
+                  <div style={{
+                    backgroundColor: '#f8fafc',
+                    borderRadius: '8px',
+                    padding: '16px',
+                    marginBottom: '20px'
+                  }}>
+                    <h4 style={{
+                      margin: '0 0 12px 0',
+                      fontSize: '14px',
+                      color: '#374151',
+                      fontWeight: '600',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      ⏰ {selectedTime === 'first' ? 'First' : 'Second'} Appointment Schedule
+                    </h4>
+                    
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontSize: '13px', color: '#6b7280' }}>Departure Time</div>
+                        <div style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>
+                          {selectedTime === 'first' 
+                            ? route.schedule?.firstAppointment?.time || '08:00 AM'
+                            : route.schedule?.secondAppointment?.time || '02:00 PM'
+                          }
+                        </div>
+                      </div>
+                      
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '13px', color: '#6b7280' }}>Available Seats</div>
+                        <div style={{ fontSize: '16px', fontWeight: '600', color: '#059669' }}>
+                          {selectedTime === 'first' 
+                            ? route.schedule?.firstAppointment?.capacity || 50
+                            : route.schedule?.secondAppointment?.capacity || 50
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Stations */}
+                  <div>
+                    <h4 style={{
+                      margin: '0 0 16px 0',
+                      fontSize: '14px',
+                      color: '#374151',
+                      fontWeight: '600',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      🏁 Stations ({route.stations?.length || 0})
+                    </h4>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {route.stations?.map((station, stationIndex) => (
+                        <div key={stationIndex} style={{
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          padding: '16px',
+                          backgroundColor: '#fafafa',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f0f9ff'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#fafafa'}
+                        >
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'flex-start',
+                            marginBottom: '8px'
+                          }}>
+                            <div style={{ flex: 1 }}>
+                              <h5 style={{
+                                margin: '0 0 4px 0',
+                                fontSize: '14px',
+                                fontWeight: '600',
+                                color: '#1f2937',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                              }}>
+                                🚏 {station.name}
+                              </h5>
+                              
+                              <p style={{
+                                margin: '0 0 8px 0',
+                                fontSize: '13px',
+                                color: '#6b7280',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                📍 {station.location}
+                              </p>
+                              
+                              {station.parkingInfo && (
+                                <p style={{
+                                  margin: '0 0 8px 0',
+                                  fontSize: '12px',
+                                  color: '#059669',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}>
+                                  🅿️ {station.parkingInfo}
+                                </p>
+                              )}
+                              
+                              <div style={{
+                                fontSize: '12px',
+                                color: '#6b7280',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                👥 Capacity: {station.capacity || 50} passengers
+                              </div>
+                            </div>
+                            
+                            {station.googleMapsLink && (
+                              <a
+                                href={station.googleMapsLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  backgroundColor: '#3b82f6',
+                                  color: 'white',
+                                  padding: '8px 12px',
+                                  borderRadius: '6px',
+                                  textDecoration: 'none',
+                                  fontSize: '12px',
+                                  fontWeight: '500',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  transition: 'all 0.2s',
+                                  marginLeft: '12px'
+                                }}
+                                onMouseOver={(e) => e.target.style.backgroundColor = '#2563eb'}
+                                onMouseOut={(e) => e.target.style.backgroundColor = '#3b82f6'}
+                              >
+                                🗺️ View on Maps
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
+          </>
         )}
       </div>
     </div>

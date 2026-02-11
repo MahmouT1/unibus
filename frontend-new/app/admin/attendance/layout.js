@@ -29,10 +29,12 @@ function AdminAttendanceLayoutContent({ children }) {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('userToken');
+    localStorage.removeItem('userRole');
     localStorage.removeItem('user');
     localStorage.removeItem('student');
     sessionStorage.clear();
-    router.push('/auth');
+    window.location.href = '/auth';
   };
 
   const handleExpenseSuccess = () => {

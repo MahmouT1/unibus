@@ -9,11 +9,12 @@ const Dashboard = () => {
     totalStudents: 0,
     totalAttendance: 0,
     activeShifts: 0,
-    todayAttendance: 0,
-    recentActivity: []
+    todayAttendance: 0
   });
   const [loading, setLoading] = useState(true);
   const [shiftIndicator, setShiftIndicator] = useState(null);
+  const [showResetTermModal, setShowResetTermModal] = useState(false);
+  const [resettingTerm, setResettingTerm] = useState(false);
 
   console.log('Dashboard component rendering');
 
@@ -39,32 +40,58 @@ const Dashboard = () => {
     // Clear all stored data
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('userToken');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('user');
     localStorage.removeItem('student');
     sessionStorage.clear();
     
-    // Redirect to login page
-    router.push('/auth');
+    // Full redirect to login page (ensures clean state)
+    window.location.href = '/auth';
+  };
+
+    const handleResetTerm = async () => {
+    try {
+      setResettingTerm(true);
+      const response = await fetch('/api/admin/reset-term', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setShowResetTermModal(false);
+        loadDashboardData();
+        alert('تم بدء التيرم الجديد بنجاح! تم تصفير أيام الحضور فقط.');
+      } else {
+        alert(data.message || 'حدث خطأ أثناء بدء التيرم الجديد');
+      }
+    } catch (error) {
+      console.error('Reset term error:', error);
+      alert('حدث خطأ في الاتصال. تأكد من تشغيل السيرفر.');
+    } finally {
+      setResettingTerm(false);
+    }
   };
 
   const loadDashboardData = async () => {
     try {
       setLoading(true);
       
-      // Load students count
-      const studentsResponse = await fetch('/api/students/profile-simple?admin=true');
+      // Load data in parallel
+      const [studentsResponse, attendanceResponse, shiftsResponse] = await Promise.all([
+        fetch('/api/students/profile-simple?admin=true'),
+        fetch('/api/attendance/records?limit=1'), // Just to get total count
+        fetch('/api/shifts?limit=20')
+      ]);
+
+      // Parse responses
       const studentsData = await studentsResponse.json();
-      
-      // Load attendance records
-      const attendanceResponse = await fetch('/api/attendance/all-records?limit=50');
       const attendanceData = await attendanceResponse.json();
-      
-      // Load shifts
-      const shiftsResponse = await fetch('/api/shifts?limit=20');
       const shiftsData = await shiftsResponse.json();
       
       // Calculate stats
       const totalStudents = studentsData.success ? Object.keys(studentsData.students || {}).length : 0;
-      const totalAttendance = attendanceData.success ? attendanceData.pagination.totalRecords : 0;
+      const totalAttendance = attendanceData.success ? attendanceData.total : 0;
       const activeShifts = shiftsData.success ? shiftsData.shifts.filter(shift => shift.status === 'open').length : 0;
       
       // Update shift indicator
@@ -82,24 +109,15 @@ const Dashboard = () => {
       } else {
         setShiftIndicator(null);
       }
-      const todayAttendance = attendanceData.success ? 
-        attendanceData.records.filter(record => 
-          new Date(record.scanTime).toDateString() === new Date().toDateString()
-        ).length : 0;
-      
-      const recentActivity = attendanceData.success ? 
-        attendanceData.records.slice(0, 5).map(record => ({
-          student: record.studentName,
-          time: new Date(record.scanTime).toLocaleString(),
-          location: record.location
-        })) : [];
+
+      // Calculate today's attendance (simplified without recent activity data)
+      const todayAttendance = 0; // Will be calculated from actual attendance data if needed
 
       setDashboardData({
         totalStudents,
         totalAttendance,
         activeShifts,
-        todayAttendance,
-        recentActivity
+        todayAttendance
       });
       
     } catch (error) {
@@ -128,9 +146,32 @@ const Dashboard = () => {
           )}
         </div>
         
-        {/* Logout Button */}
-        <button 
-          onClick={handleLogout}
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          {/* بدء تيرم جديد */}
+          <button 
+            onClick={() => setShowResetTermModal(true)}
+            style={{
+              background: 'linear-gradient(135deg, #3182ce, #2c5282)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '12px 20px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '14px',
+              fontWeight: '600',
+              transition: 'all 0.3s ease',
+              boxShadow: '0 4px 12px rgba(49, 130, 206, 0.3)'
+            }}
+          >
+            <span>📅</span>
+            <span>بدء تيرم جديد</span>
+          </button>
+          {/* Logout Button */}
+          <button 
+            onClick={handleLogout}
           style={{
             background: 'linear-gradient(135deg, #e53e3e, #c53030)',
             color: 'white',
@@ -158,7 +199,75 @@ const Dashboard = () => {
           <span>🚪</span>
           <span>Logout</span>
         </button>
+        </div>
       </div>
+
+      {/* نافذة تأكيد بدء التيرم الجديد */}
+      {showResetTermModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }} onClick={() => !resettingTerm && setShowResetTermModal(false)}>
+          <div style={{
+            background: 'white',
+            padding: '28px',
+            borderRadius: '12px',
+            maxWidth: '420px',
+            width: '90%',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+          }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 12px 0', color: '#1a202c', fontSize: '1.25rem' }}>
+              ⚠️ تأكيد بدء تيرم جديد
+            </h3>
+            <p style={{ color: '#4a5568', margin: '0 0 20px 0', lineHeight: 1.6 }}>
+              سيتم تصفير <strong>أيام الحضور فقط</strong> لجميع الطلاب. لن يتم حذف الحسابات أو بيانات الطلاب أو الاشتراكات.
+            </p>
+            <p style={{ color: '#718096', margin: '0 0 20px 0', fontSize: '0.9rem' }}>
+              هل أنت متأكد من المتابعة؟
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => !resettingTerm && setShowResetTermModal(false)}
+                disabled={resettingTerm}
+                style={{
+                  padding: '10px 20px',
+                  border: '2px solid #cbd5e0',
+                  background: 'white',
+                  borderRadius: '8px',
+                  cursor: resettingTerm ? 'not-allowed' : 'pointer',
+                  fontWeight: '600',
+                  color: '#4a5568'
+                }}
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handleResetTerm}
+                disabled={resettingTerm}
+                style={{
+                  padding: '10px 20px',
+                  border: 'none',
+                  background: resettingTerm ? '#a0aec0' : 'linear-gradient(135deg, #3182ce, #2c5282)',
+                  color: 'white',
+                  borderRadius: '8px',
+                  cursor: resettingTerm ? 'not-allowed' : 'pointer',
+                  fontWeight: '600'
+                }}
+              >
+                {resettingTerm ? 'جاري التنفيذ...' : 'تأكيد'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Shift Indicator - Large Green Box */}
       {shiftIndicator && shiftIndicator.isActive && (
@@ -218,34 +327,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Recent Activity */}
-      <div style={{ background: '#f7fafc', border: '2px solid #e2e8f0', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
-        <h3 style={{ color: '#2d3748', margin: '0 0 15px 0' }}>📈 Recent Activity</h3>
-        {dashboardData.recentActivity.length > 0 ? (
-          <div>
-            {dashboardData.recentActivity.map((activity, index) => (
-              <div key={index} style={{ 
-                background: 'white', 
-                border: '1px solid #e2e8f0', 
-                borderRadius: '8px', 
-                padding: '15px', 
-                margin: '10px 0',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <div>
-                  <strong>{activity.student}</strong>
-                  <div style={{ color: '#6b7280', fontSize: '0.9rem' }}>{activity.location}</div>
-                </div>
-                <div style={{ color: '#4a5568', fontSize: '0.9rem' }}>{activity.time}</div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p style={{ color: '#6b7280', textAlign: 'center', padding: '20px' }}>No recent activity</p>
-        )}
-      </div>
 
       <section className="cards">
         <div className="card" onClick={() => window.location.href = '/admin/attendance'} style={{cursor: 'pointer'}}>
@@ -260,7 +341,7 @@ const Dashboard = () => {
           <h3>Attendance</h3>
           <p>Track student attendance</p>
         </div>
-        <div className="card" onClick={() => window.location.href = '/admin/subscription-management'} style={{cursor: 'pointer'}}>
+        <div className="card" onClick={() => window.location.href = '/admin/subscriptions'} style={{cursor: 'pointer'}}>
           <div className="card-icon">
             <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
@@ -290,6 +371,19 @@ const Dashboard = () => {
           </div>
           <h3>Supervisor Dashboard</h3>
           <p>Manage attendance and return schedules</p>
+        </div>
+        <div className="card" onClick={() => window.location.href = '/admin/transportation'} style={{cursor: 'pointer'}}>
+          <div className="card-icon">
+            <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="6" width="18" height="12" rx="2" ry="2"></rect>
+              <circle cx="7" cy="12" r="1"></circle>
+              <circle cx="12" cy="12" r="1"></circle>
+              <circle cx="17" cy="12" r="1"></circle>
+              <path d="M7 6V4a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </div>
+          <h3>Transportation</h3>
+          <p>Manage bus schedules and stations</p>
         </div>
       </section>
 

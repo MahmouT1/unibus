@@ -26,6 +26,15 @@ export default function StudentPortal() {
       }
       
       const parsedUser = JSON.parse(userData);
+      // Redirect admin/supervisor to their correct dashboards
+      if (parsedUser.role === 'admin') {
+        window.location.href = '/admin/dashboard';
+        return;
+      }
+      if (parsedUser.role === 'supervisor') {
+        window.location.href = '/admin/supervisor-dashboard';
+        return;
+      }
       setUser(parsedUser);
       
       // Try to fetch fresh student data from API
@@ -88,9 +97,12 @@ export default function StudentPortal() {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('userToken');
+    localStorage.removeItem('userRole');
     localStorage.removeItem('user');
     localStorage.removeItem('student');
-    router.push('/');
+    sessionStorage.clear();
+    window.location.href = '/auth';
   };
 
   const navigateToRegistration = () => {

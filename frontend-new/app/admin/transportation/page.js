@@ -1,20 +1,29 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+
 
 function TransportationManagementContent({ user, onLogout }) {
   const [transportationData, setTransportationData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
-    time: '',
-    location: '',
-    parking: '',
-    capacity: '',
-    status: 'Active'
+    routeName: '',
+    firstAppointmentTime: '08:00',
+    secondAppointmentTime: '14:00',
+    firstAppointmentCapacity: '50',
+    secondAppointmentCapacity: '50'
   });
+  const [stations, setStations] = useState([
+    {
+      name: '',
+      location: '',
+      googleMapsLink: '',
+      parkingInfo: '',
+      capacity: '50',
+      status: 'active'
+    }
+  ]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -27,8 +36,10 @@ function TransportationManagementContent({ user, onLogout }) {
     try {
       const response = await fetch('/api/transportation');
       if (response.ok) {
-        const data = await response.json();
-        setTransportationData(data);
+        const result = await response.json();
+        if (result.success) {
+          setTransportationData(result.data);
+        }
       }
     } catch (error) {
       console.error('Error fetching transportation data:', error);
@@ -47,11 +58,64 @@ function TransportationManagementContent({ user, onLogout }) {
     if (error) setError('');
   };
 
+  const handleStationChange = (index, field, value) => {
+    const updatedStations = [...stations];
+    updatedStations[index][field] = value;
+    setStations(updatedStations);
+    if (error) setError('');
+  };
+
+  const addStation = () => {
+    setStations([...stations, {
+      name: '',
+      location: '',
+      googleMapsLink: '',
+      parkingInfo: '',
+      capacity: '50',
+      status: 'active'
+    }]);
+  };
+
+  const removeStation = (index) => {
+    if (stations.length > 1) {
+      const updatedStations = stations.filter((_, i) => i !== index);
+      setStations(updatedStations);
+    }
+  };
+
+  const validateGoogleMapsLink = (link) => {
+    const googleMapsPattern = /^https:\/\/(www\.)?(maps\.google|google\.com\/maps)/i;
+    return googleMapsPattern.test(link) || link.includes('goo.gl') || link.includes('maps.app.goo.gl');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setError('');
     setSuccess('');
+
+    // Validate form
+    if (!formData.routeName) {
+      setError('Please enter a route name');
+      setSubmitting(false);
+      return;
+    }
+
+    // Validate stations
+    for (let i = 0; i < stations.length; i++) {
+      const station = stations[i];
+      if (!station.name || !station.location || !station.googleMapsLink) {
+        setError(`Please fill in all required fields for station ${i + 1}`);
+        setSubmitting(false);
+        return;
+      }
+      
+      if (!validateGoogleMapsLink(station.googleMapsLink)) {
+        setError(`Please enter a valid Google Maps link for station ${i + 1}`);
+        setSubmitting(false);
+        return;
+      }
+    }
 
     try {
       const response = await fetch('/api/transportation', {
@@ -59,7 +123,14 @@ function TransportationManagementContent({ user, onLogout }) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          routeName: formData.routeName,
+          stations,
+          firstAppointmentTime: formData.firstAppointmentTime,
+          secondAppointmentTime: formData.secondAppointmentTime,
+          firstAppointmentCapacity: formData.firstAppointmentCapacity,
+          secondAppointmentCapacity: formData.secondAppointmentCapacity
+        }),
       });
 
       const data = await response.json();
@@ -67,18 +138,25 @@ function TransportationManagementContent({ user, onLogout }) {
       if (response.ok && data.success) {
         setSuccess('Transportation schedule added successfully!');
         setFormData({
-          name: '',
-          time: '',
-          location: '',
-          parking: '',
-          capacity: '',
-          status: 'Active'
+          routeName: '',
+          firstAppointmentTime: '08:00',
+          secondAppointmentTime: '14:00',
+          firstAppointmentCapacity: '50',
+          secondAppointmentCapacity: '50'
         });
+        setStations([{
+          name: '',
+          location: '',
+          googleMapsLink: '',
+          parkingInfo: '',
+          capacity: '50',
+          status: 'active'
+        }]);
         setShowForm(false);
         // Refresh the data
         fetchTransportationData();
       } else {
-        setError(data.error || 'Failed to add transportation schedule');
+        setError(data.message || 'Failed to add transportation schedule');
       }
     } catch (error) {
       console.error('Error adding transportation schedule:', error);
@@ -94,15 +172,18 @@ function TransportationManagementContent({ user, onLogout }) {
     }
 
     try {
-      const response = await fetch(`/api/transportation/${id}`, {
+      const response = await fetch(`/api/transportation?id=${id}`, {
         method: 'DELETE',
       });
 
-      if (response.ok) {
+      const data = await response.json();
+
+      if (response.ok && data.success) {
         setSuccess('Transportation schedule deleted successfully!');
         fetchTransportationData();
+        setTimeout(() => setSuccess(''), 3000);
       } else {
-        setError('Failed to delete transportation schedule');
+        setError(data.message || 'Failed to delete transportation schedule');
       }
     } catch (error) {
       console.error('Error deleting transportation schedule:', error);
@@ -115,28 +196,13 @@ function TransportationManagementContent({ user, onLogout }) {
       <div style={{
         minHeight: '100vh',
         display: 'flex',
-        alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#f3f4f6'
+        alignItems: 'center',
+        backgroundColor: '#f8fafc'
       }}>
-        <div style={{
-          textAlign: 'center',
-          padding: '40px',
-          backgroundColor: 'white',
-          borderRadius: '12px',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
-        }}>
-          <div style={{
-            width: '50px',
-            height: '50px',
-            border: '4px solid #e2e8f0',
-            borderTop: '4px solid #3b82f6',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 20px'
-          }} />
-          <h3 style={{ margin: '0 0 10px 0', color: '#1f2937' }}>Loading Transportation Data...</h3>
-          <p style={{ margin: '0', color: '#6b7280' }}>Please wait while we fetch the schedules.</p>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '24px', marginBottom: '16px' }}>🚌</div>
+          <p style={{ color: '#6b7280' }}>Loading transportation data...</p>
         </div>
       </div>
     );
@@ -169,7 +235,7 @@ function TransportationManagementContent({ user, onLogout }) {
         }} />
         
         <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
-          <h1 style={{ margin: '0', fontSize: '28px' }}>Transportation Management</h1>
+          <h1 style={{ margin: '0', fontSize: '28px' }}>🚌 Transportation Management</h1>
           <p style={{ margin: '5px 0 0 0', opacity: '0.9' }}>
             Manage bus schedules, station locations, and parking information
           </p>
@@ -194,10 +260,10 @@ function TransportationManagementContent({ user, onLogout }) {
         }}>
           <div>
             <h2 style={{ margin: '0 0 8px 0', fontSize: '20px', color: '#1f2937' }}>
-              Transportation Schedules
+              Transportation Routes
             </h2>
             <p style={{ margin: '0', color: '#6b7280' }}>
-              Add and manage transportation schedules for students
+              Add and manage transportation routes with stations and schedules
             </p>
           </div>
           <button
@@ -213,11 +279,14 @@ function TransportationManagementContent({ user, onLogout }) {
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px'
+              gap: '8px',
+              transition: 'all 0.2s'
             }}
+            onMouseOver={(e) => e.target.style.backgroundColor = '#2563eb'}
+            onMouseOut={(e) => e.target.style.backgroundColor = '#3b82f6'}
           >
-            <span>➕</span>
-            {showForm ? 'Cancel' : 'Add New Schedule'}
+            <span>{showForm ? '❌' : '➕'}</span>
+            {showForm ? 'Cancel' : 'Add New Route'}
           </button>
         </div>
 
@@ -228,220 +297,398 @@ function TransportationManagementContent({ user, onLogout }) {
             borderRadius: '12px',
             padding: '30px',
             marginBottom: '30px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
           }}>
-            <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', color: '#1f2937' }}>
-              Add New Transportation Schedule
+            <h3 style={{ margin: '0 0 20px 0', fontSize: '20px', color: '#1f2937', fontWeight: '600' }}>
+              🚌 Add New Transportation Route
             </h3>
             
             <form onSubmit={handleSubmit}>
+              {/* Route Information */}
               <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                gap: '20px',
-                marginBottom: '20px'
+                backgroundColor: '#f8fafc',
+                borderRadius: '8px',
+                padding: '20px',
+                marginBottom: '24px'
               }}>
-                <div>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#374151'
-                  }}>
-                    Schedule Name *
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '8px',
-                      fontSize: '16px',
-                      boxSizing: 'border-box'
-                    }}
-                    placeholder="e.g., Morning Route, Evening Route"
-                  />
-                </div>
-
-                <div>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#374151'
-                  }}>
-                    Departure Time *
-                  </label>
-                  <input
-                    type="time"
-                    name="time"
-                    value={formData.time}
-                    onChange={handleInputChange}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '8px',
-                      fontSize: '16px',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#374151'
-                  }}>
-                    Location *
-                  </label>
-                  <input
-                    type="text"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleInputChange}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '8px',
-                      fontSize: '16px',
-                      boxSizing: 'border-box'
-                    }}
-                    placeholder="e.g., Downtown Area, Main Campus Entrance"
-                  />
-                </div>
-
-                <div>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#374151'
-                  }}>
-                    Parking Area *
-                  </label>
-                  <input
-                    type="text"
-                    name="parking"
-                    value={formData.parking}
-                    onChange={handleInputChange}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '8px',
-                      fontSize: '16px',
-                      boxSizing: 'border-box'
-                    }}
-                    placeholder="e.g., Main Parking Lot A, Student Parking B"
-                  />
-                </div>
-
-                <div>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#374151'
-                  }}>
-                    Capacity *
-                  </label>
-                  <input
-                    type="number"
-                    name="capacity"
-                    value={formData.capacity}
-                    onChange={handleInputChange}
-                    required
-                    min="1"
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '8px',
-                      fontSize: '16px',
-                      boxSizing: 'border-box'
-                    }}
-                    placeholder="e.g., 150"
-                  />
-                </div>
-
-                <div>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#374151'
-                  }}>
-                    Status
-                  </label>
-                  <select
-                    name="status"
-                    value={formData.status}
-                    onChange={handleInputChange}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '8px',
-                      fontSize: '16px',
-                      boxSizing: 'border-box'
-                    }}
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                    <option value="Maintenance">Maintenance</option>
-                  </select>
+                <h4 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#374151', fontWeight: '600' }}>
+                  📍 Route Information
+                </h4>
+                
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                  gap: '16px'
+                }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: '#374151', fontSize: '14px' }}>
+                      Route Name *
+                    </label>
+                    <input
+                      type="text"
+                      name="routeName"
+                      value={formData.routeName}
+                      onChange={handleInputChange}
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        boxSizing: 'border-box',
+                        transition: 'border-color 0.2s'
+                      }}
+                      placeholder="e.g., Downtown to University"
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* Error Message */}
+              {/* Schedule Times */}
+              <div style={{
+                backgroundColor: '#f0f9ff',
+                borderRadius: '8px',
+                padding: '20px',
+                marginBottom: '24px'
+              }}>
+                <h4 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#374151', fontWeight: '600' }}>
+                  ⏰ Schedule Times
+                </h4>
+                
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: '16px'
+                }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: '#374151', fontSize: '14px' }}>
+                      First Appointment Time
+                    </label>
+                    <input
+                      type="time"
+                      name="firstAppointmentTime"
+                      value={formData.firstAppointmentTime}
+                      onChange={handleInputChange}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: '#374151', fontSize: '14px' }}>
+                      First Appointment Capacity
+                    </label>
+                    <input
+                      type="number"
+                      name="firstAppointmentCapacity"
+                      value={formData.firstAppointmentCapacity}
+                      onChange={handleInputChange}
+                      min="1"
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        boxSizing: 'border-box'
+                      }}
+                      placeholder="50"
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: '#374151', fontSize: '14px' }}>
+                      Second Appointment Time
+                    </label>
+                    <input
+                      type="time"
+                      name="secondAppointmentTime"
+                      value={formData.secondAppointmentTime}
+                      onChange={handleInputChange}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: '#374151', fontSize: '14px' }}>
+                      Second Appointment Capacity
+                    </label>
+                    <input
+                      type="number"
+                      name="secondAppointmentCapacity"
+                      value={formData.secondAppointmentCapacity}
+                      onChange={handleInputChange}
+                      min="1"
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        boxSizing: 'border-box'
+                      }}
+                      placeholder="50"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Stations */}
+              <div style={{
+                backgroundColor: '#f0fdf4',
+                borderRadius: '8px',
+                padding: '20px',
+                marginBottom: '24px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h4 style={{ margin: '0', fontSize: '16px', color: '#374151', fontWeight: '600' }}>
+                    🏁 Stations ({stations.length})
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={addStation}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseOver={(e) => e.target.style.backgroundColor = '#059669'}
+                    onMouseOut={(e) => e.target.style.backgroundColor = '#10b981'}
+                  >
+                    ➕ Add Station
+                  </button>
+                </div>
+                
+                {stations.map((station, index) => (
+                  <div key={index} style={{
+                    backgroundColor: 'white',
+                    border: '2px solid #e5e7eb',
+                    borderRadius: '8px',
+                    padding: '16px',
+                    marginBottom: '16px',
+                    position: 'relative'
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '12px'
+                    }}>
+                      <h5 style={{ margin: '0', fontSize: '14px', color: '#374151', fontWeight: '600' }}>
+                        🚏 Station {index + 1}
+                      </h5>
+                      {stations.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeStation(index)}
+                          style={{
+                            padding: '4px 8px',
+                            backgroundColor: '#ef4444',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseOver={(e) => e.target.style.backgroundColor = '#dc2626'}
+                          onMouseOut={(e) => e.target.style.backgroundColor = '#ef4444'}
+                        >
+                          🗑️ Remove
+                        </button>
+                      )}
+                    </div>
+                    
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                      gap: '12px'
+                    }}>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500', color: '#374151', fontSize: '13px' }}>
+                          Station Name *
+                        </label>
+                        <input
+                          type="text"
+                          value={station.name}
+                          onChange={(e) => handleStationChange(index, 'name', e.target.value)}
+                          required
+                          style={{
+                            width: '100%',
+                            padding: '10px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '4px',
+                            fontSize: '13px',
+                            boxSizing: 'border-box'
+                          }}
+                          placeholder="e.g., Main Campus Gate"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500', color: '#374151', fontSize: '13px' }}>
+                          Location *
+                        </label>
+                        <input
+                          type="text"
+                          value={station.location}
+                          onChange={(e) => handleStationChange(index, 'location', e.target.value)}
+                          required
+                          style={{
+                            width: '100%',
+                            padding: '10px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '4px',
+                            fontSize: '13px',
+                            boxSizing: 'border-box'
+                          }}
+                          placeholder="e.g., 123 University St"
+                        />
+                      </div>
+                      
+                      <div style={{ gridColumn: 'span 2' }}>
+                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500', color: '#374151', fontSize: '13px' }}>
+                          Google Maps Link *
+                        </label>
+                        <input
+                          type="url"
+                          value={station.googleMapsLink}
+                          onChange={(e) => handleStationChange(index, 'googleMapsLink', e.target.value)}
+                          required
+                          style={{
+                            width: '100%',
+                            padding: '10px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '4px',
+                            fontSize: '13px',
+                            boxSizing: 'border-box'
+                          }}
+                          placeholder="https://maps.google.com/..."
+                        />
+                      </div>
+                      
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500', color: '#374151', fontSize: '13px' }}>
+                          Parking Info
+                        </label>
+                        <input
+                          type="text"
+                          value={station.parkingInfo}
+                          onChange={(e) => handleStationChange(index, 'parkingInfo', e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '10px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '4px',
+                            fontSize: '13px',
+                            boxSizing: 'border-box'
+                          }}
+                          placeholder="Free parking available"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500', color: '#374151', fontSize: '13px' }}>
+                          Capacity
+                        </label>
+                        <input
+                          type="number"
+                          value={station.capacity}
+                          onChange={(e) => handleStationChange(index, 'capacity', e.target.value)}
+                          min="1"
+                          style={{
+                            width: '100%',
+                            padding: '10px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '4px',
+                            fontSize: '13px',
+                            boxSizing: 'border-box'
+                          }}
+                          placeholder="50"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Error/Success Messages */}
               {error && (
                 <div style={{
-                  backgroundColor: '#fed7d7',
-                  border: '1px solid #feb2b2',
-                  color: '#c53030',
-                  padding: '12px 16px',
+                  backgroundColor: '#fef2f2',
+                  border: '2px solid #fecaca',
                   borderRadius: '8px',
+                  padding: '16px',
                   marginBottom: '20px',
-                  fontSize: '14px'
+                  color: '#dc2626',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
                 }}>
+                  <span>⚠️</span>
                   {error}
                 </div>
               )}
 
-              {/* Success Message */}
               {success && (
                 <div style={{
-                  backgroundColor: '#c6f6d5',
-                  border: '1px solid #9ae6b4',
-                  color: '#2f855a',
-                  padding: '12px 16px',
+                  backgroundColor: '#f0fdf4',
+                  border: '2px solid #bbf7d0',
                   borderRadius: '8px',
+                  padding: '16px',
                   marginBottom: '20px',
-                  fontSize: '14px'
+                  color: '#166534',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
                 }}>
+                  <span>✅</span>
                   {success}
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: '12px' }}>
+              {/* Submit Buttons */}
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowForm(false)}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#f3f4f6',
+                    color: '#374151',
+                    border: '2px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  ❌ Cancel
+                </button>
                 <button
                   type="submit"
                   disabled={submitting}
@@ -451,120 +698,128 @@ function TransportationManagementContent({ user, onLogout }) {
                     color: 'white',
                     border: 'none',
                     borderRadius: '8px',
-                    fontSize: '16px',
+                    fontSize: '14px',
                     fontWeight: '500',
-                    cursor: submitting ? 'not-allowed' : 'pointer'
+                    cursor: submitting ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
                   }}
                 >
-                  {submitting ? 'Adding...' : 'Add Schedule'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowForm(false)}
-                  style={{
-                    padding: '12px 24px',
-                    backgroundColor: '#6b7280',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '16px',
-                    fontWeight: '500',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Cancel
+                  {submitting ? '⏳ Adding...' : '✅ Add Transportation Route'}
                 </button>
               </div>
             </form>
           </div>
         )}
 
-        {/* Transportation Schedules List */}
+        {/* Existing Transportation Data */}
         <div style={{
           backgroundColor: 'white',
           borderRadius: '12px',
           padding: '30px',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
         }}>
-          <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', color: '#1f2937' }}>
-            Current Transportation Schedules
+          <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', color: '#1f2937', fontWeight: '600' }}>
+            📋 Existing Transportation Routes ({transportationData.length})
           </h3>
           
           {transportationData.length === 0 ? (
             <div style={{
               textAlign: 'center',
               padding: '40px',
-              color: '#6b7280'
+              color: '#6b7280',
+              backgroundColor: '#f9fafb',
+              borderRadius: '8px',
+              border: '2px dashed #d1d5db'
             }}>
               <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚌</div>
-              <p>No transportation schedules found. Add your first schedule above.</p>
+              <h4 style={{ margin: '0 0 8px 0', color: '#374151' }}>No Transportation Routes</h4>
+              <p style={{ margin: '0' }}>Add your first transportation route to get started!</p>
             </div>
           ) : (
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
               gap: '20px'
             }}>
-              {transportationData.map((schedule, index) => (
-                <div key={index} style={{
-                  border: '1px solid #e5e7eb',
+              {transportationData.map((route, index) => (
+                <div key={route._id || index} style={{
+                  border: '2px solid #e5e7eb',
                   borderRadius: '12px',
                   padding: '20px',
-                  transition: 'all 0.2s ease'
+                  transition: 'all 0.2s',
+                  backgroundColor: '#fafafa'
                 }}>
-                  <div style={{ marginBottom: '16px' }}>
-                    <h4 style={{ 
-                      margin: '0 0 8px 0', 
-                      fontSize: '18px', 
-                      color: '#1f2937',
-                      fontWeight: '600'
-                    }}>
-                      {schedule.name}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                    <h4 style={{ margin: '0', fontSize: '16px', color: '#1f2937', fontWeight: '600' }}>
+                      🚌 {route.routeName}
                     </h4>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '14px' }}>🕒</span>
-                      <span style={{ fontSize: '14px', color: '#6b7280' }}>{schedule.time}</span>
+                    <button
+                      onClick={() => handleDelete(route._id)}
+                      style={{
+                        padding: '4px 8px',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseOver={(e) => e.target.style.backgroundColor = '#dc2626'}
+                      onMouseOut={(e) => e.target.style.backgroundColor = '#ef4444'}
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                  
+                  <div style={{ marginBottom: '12px' }}>
+                    <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '8px' }}>
+                      ⏰ <strong>Schedule:</strong>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '14px' }}>📍</span>
-                      <span style={{ fontSize: '14px', color: '#6b7280' }}>{schedule.location}</span>
+                    <div style={{ fontSize: '13px', color: '#374151', marginLeft: '16px' }}>
+                      • First: {route.schedule?.firstAppointment?.time} ({route.schedule?.firstAppointment?.capacity} seats)
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '14px' }}>🅿️</span>
-                      <span style={{ fontSize: '14px', color: '#6b7280' }}>{schedule.parking}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '14px' }}>👥</span>
-                      <span style={{ fontSize: '14px', color: '#6b7280' }}>{schedule.capacity} students</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                      <span style={{ fontSize: '14px' }}>✅</span>
-                      <span style={{ 
-                        fontSize: '14px', 
-                        color: schedule.status === 'Active' ? '#10b981' : '#f59e0b',
-                        fontWeight: '500' 
-                      }}>
-                        {schedule.status}
-                      </span>
+                    <div style={{ fontSize: '13px', color: '#374151', marginLeft: '16px' }}>
+                      • Second: {route.schedule?.secondAppointment?.time} ({route.schedule?.secondAppointment?.capacity} seats)
                     </div>
                   </div>
                   
-                  <button
-                    onClick={() => handleDelete(schedule._id)}
-                    style={{
-                      width: '100%',
-                      padding: '10px 16px',
-                      backgroundColor: '#ef4444',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    🗑️ Delete Schedule
-                  </button>
+                  <div>
+                    <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '8px' }}>
+                      🏁 <strong>Stations ({route.stations?.length || 0}):</strong>
+                    </div>
+                    {route.stations?.map((station, stationIndex) => (
+                      <div key={stationIndex} style={{
+                        fontSize: '13px',
+                        color: '#374151',
+                        marginLeft: '16px',
+                        marginBottom: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        <span>🚏</span>
+                        <span>{station.name}</span>
+                        {station.googleMapsLink && (
+                          <a
+                            href={station.googleMapsLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              color: '#3b82f6',
+                              textDecoration: 'none',
+                              fontSize: '12px'
+                            }}
+                          >
+                            📍 Maps
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
@@ -576,5 +831,47 @@ function TransportationManagementContent({ user, onLogout }) {
 }
 
 export default function TransportationManagement() {
-  return <TransportationManagementContent />;
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Get user from localStorage
+    const userData = localStorage.getItem('user');
+    const adminToken = localStorage.getItem('adminToken');
+    
+    if (userData && adminToken) {
+      try {
+        setUser(JSON.parse(userData));
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+      }
+    }
+    setLoading(false);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('user');
+    window.location.href = '/auth';
+  };
+
+  if (loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        backgroundColor: '#f8fafc'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '24px', marginBottom: '16px' }}>🚌</div>
+          <p style={{ color: '#6b7280' }}>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return <TransportationManagementContent user={user} onLogout={handleLogout} />;
 }

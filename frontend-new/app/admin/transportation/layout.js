@@ -7,25 +7,42 @@ import { useLanguage } from '../../../lib/contexts/LanguageContext';
 import LanguageSwitcher from '../../../components/LanguageSwitcher';
 import '../admin-layout.css';
 
-function TransportationLayoutContent({ children, user, onLogout }) {
+function TransportationLayoutContent({ children }) {
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
   const { t } = useLanguage();
 
   useEffect(() => {
+    // Get user from localStorage
+    if (typeof window !== 'undefined') {
+      const userData = localStorage.getItem('user');
+      const token = localStorage.getItem('token');
+      
+      if (userData && token) {
+        try {
+          setUser(JSON.parse(userData));
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+          router.push('/auth');
+          return;
+        }
+      } else {
+        router.push('/auth');
+        return;
+      }
+    }
     setLoading(false);
-  }, []);
+  }, [router]);
 
   const handleLogout = () => {
-    if (onLogout) {
-      onLogout();
-    } else {
-      localStorage.removeItem('adminToken');
-      localStorage.removeItem('userRole');
-      localStorage.removeItem('user');
-      router.push('/admin-login');
-    }
+    localStorage.removeItem('token');
+    localStorage.removeItem('userToken');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('user');
+    sessionStorage.clear();
+    window.location.href = '/auth';
   };
 
   if (loading) {
@@ -134,10 +151,8 @@ function TransportationLayoutContent({ children, user, onLogout }) {
 
 export default function TransportationLayout({ children }) {
   return (
-    <AdminAuthGuard requiredRole="admin">
-      <TransportationLayoutContent>
-        {children}
-      </TransportationLayoutContent>
-    </AdminAuthGuard>
+    <TransportationLayoutContent>
+      {children}
+    </TransportationLayoutContent>
   );
 }

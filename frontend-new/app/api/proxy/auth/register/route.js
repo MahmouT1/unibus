@@ -3,29 +3,21 @@ import { NextResponse } from 'next/server';
 export async function POST(request) {
   try {
     const body = await request.json();
-    
-    console.log('🔄 Proxying register request to backend...');
-    
-    // Forward request to backend
-    const backendResponse = await fetch('http://localhost:3001/api/auth/register', {
+    const backendUrl = (process.env.BACKEND_URL || 'http://127.0.0.1:3001').replace(/\/$/, '');
+    const backendResponse = await fetch(`${backendUrl}/api/auth/register`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    
-    const data = await backendResponse.json();
-    
-    console.log('📡 Backend response:', backendResponse.status, data);
-    
+    const text = await backendResponse.text();
+    let data;
+    try {
+      data = text ? JSON.parse(text) : { success: false, message: 'Empty response' };
+    } catch (_) {
+      return NextResponse.json({ success: false, message: 'Invalid response' }, { status: 502 });
+    }
     return NextResponse.json(data, { status: backendResponse.status });
-    
   } catch (error) {
-    console.error('❌ Proxy error:', error);
-    return NextResponse.json({
-      success: false,
-      message: 'Proxy server error'
-    }, { status: 500 });
+    return NextResponse.json({ success: false, message: 'Proxy server error' }, { status: 500 });
   }
 }

@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 import { MongoClient } from 'mongodb';
 import bcrypt from 'bcryptjs';
 
-const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/student-portal';
+const baseUri = (process.env.MONGODB_URI || 'mongodb://localhost:27017').replace(/\/$/, '');
+const dbName = process.env.MONGODB_DB || process.env.DB_NAME || 'student_portal';
+const uri = baseUri.includes('/') && baseUri.split('/').length >= 4 ? baseUri : `${baseUri}/${dbName}`;
 
 export async function POST(request) {
   try {
@@ -12,7 +14,7 @@ export async function POST(request) {
       await client.connect();
       console.log('Connected to MongoDB');
       
-      const db = client.db('student-portal');
+      const db = client.db(dbName);
       const usersCollection = db.collection('users');
       
       // Check if admin users already exist

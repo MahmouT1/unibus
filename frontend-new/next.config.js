@@ -1,6 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   trailingSlash: false,
+  async rewrites() {
+    const backend = process.env.BACKEND_URL || 'http://127.0.0.1:3001';
+    return [
+      { source: '/login', destination: '/auth' },
+      { source: '/admin-login', destination: '/auth' },
+      { source: '/auth-api/:path*', destination: `${backend}/auth-api/:path*` },
+    ];
+  },
   images: {
     unoptimized: true
   },

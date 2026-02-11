@@ -1,41 +1,32 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import Link from 'next/link';
-import { useLanguage } from '../../../lib/contexts/LanguageContext';
-import LanguageSwitcher from '../../../components/LanguageSwitcher';
-import '../admin-layout.css';
+import { useRouter } from 'next/navigation';
+import AdminRoute from '../../../lib/AdminRoute';
 
-function SupervisorDashboardLayoutContent({ children }) {
+function SupervisorLayoutContent({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const router = useRouter();
-  const pathname = usePathname();
-  const { t } = useLanguage();
 
   useEffect(() => {
-    // Get user from localStorage
-    if (typeof window !== 'undefined') {
-      const userData = localStorage.getItem('user');
-      const adminToken = localStorage.getItem('adminToken');
-      
-      if (userData && adminToken) {
-        try {
-          setUser(JSON.parse(userData));
-        } catch (error) {
-          console.error('Error parsing user data:', error);
-        }
-      }
+    // Get user data from localStorage
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
     }
     setLoading(false);
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('adminToken');
+    localStorage.removeItem('token');
+    localStorage.removeItem('userToken');
     localStorage.removeItem('userRole');
     localStorage.removeItem('user');
-    router.push('/admin-login');
+    localStorage.removeItem('student');
+    sessionStorage.clear();
+    window.location.href = '/auth';
   };
 
   if (loading) {
@@ -44,158 +35,224 @@ function SupervisorDashboardLayoutContent({ children }) {
         display: 'flex', 
         justifyContent: 'center', 
         alignItems: 'center', 
-        height: '100vh' 
+        height: '100vh',
+        background: '#f8f9fa'
       }}>
-        <div>Loading...</div>
+        <div style={{
+          padding: '20px',
+          background: 'white',
+          borderRadius: '12px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+        }}>
+          Loading...
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="admin-layout">
-      {/* Sidebar */}
-      <aside className="admin-sidebar">
-        <div className="sidebar-header">
-          <div className="admin-profile">
-            <div className="admin-avatar">
+    <div style={{
+      display: 'flex',
+      minHeight: '100vh',
+      background: '#f8f9fa',
+      fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif'
+    }}>
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        style={{
+          position: 'fixed',
+          top: '20px',
+          left: '20px',
+          zIndex: 1001,
+          background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+          border: 'none',
+          borderRadius: '12px',
+          padding: '12px',
+          color: 'white',
+          cursor: 'pointer',
+          boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '18px',
+          transition: 'all 0.3s ease'
+        }}
+        onMouseOver={(e) => {
+          e.currentTarget.style.transform = 'translateY(-2px)';
+          e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.4)';
+        }}
+        onMouseOut={(e) => {
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
+        }}
+      >
+        ☰
+      </button>
+
+      {/* Sidebar Overlay for Mobile */}
+      {sidebarOpen && (
+        <div
+          onClick={() => setSidebarOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 999,
+            display: 'block'
+          }}
+        />
+      )}
+
+      {/* Minimal Sidebar */}
+      <aside style={{
+        width: '280px',
+        background: 'linear-gradient(180deg, #1e293b 0%, #334155 100%)',
+        color: 'white',
+        display: 'flex',
+        flexDirection: 'column',
+        boxShadow: '4px 0 20px rgba(0, 0, 0, 0.1)',
+        position: 'fixed',
+        height: '100vh',
+        overflowY: 'auto',
+        zIndex: 1000,
+        transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
+        transition: 'transform 0.3s ease'
+      }}>
+        {/* Sidebar Header */}
+        <div style={{
+          padding: '2rem 1.5rem',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <div style={{
+              width: '50px',
+              height: '50px',
+              background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '1.5rem',
+              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+            }}>
               👨‍💼
             </div>
-            <div className="admin-info">
-              <div className="admin-name">{user?.email || 'Supervisor'}</div>
-              <div className="admin-role">Supervisor</div>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column'
+            }}>
+              <div style={{
+                fontSize: '1.1rem',
+                fontWeight: '600',
+                color: 'white',
+                wordBreak: 'break-all'
+              }}>
+                {user?.email || 'Supervisor'}
+              </div>
+              <div style={{
+                fontSize: '0.9rem',
+                color: '#cbd5e1',
+                fontWeight: '500'
+              }}>
+                Supervisor
+              </div>
             </div>
           </div>
-          <div style={{ marginTop: '15px', display: 'flex', justifyContent: 'center' }}>
-            <LanguageSwitcher variant="admin" />
-          </div>
         </div>
 
-        <nav className="sidebar-nav">
-          <Link href="/admin/dashboard" className={`nav-item ${pathname === '/admin/dashboard' ? 'active' : ''}`}>
-            <span className="nav-icon">📊</span>
-            <span className="nav-label">Dashboard</span>
-          </Link>
-          
-          <Link href="/admin/supervisor-dashboard" className={`nav-item ${pathname === '/admin/supervisor-dashboard' ? 'active' : ''}`}>
-            <span className="nav-icon">👨‍💼</span>
-            <span className="nav-label">Supervisor Dashboard</span>
-          </Link>
-          
-          <Link href="/admin/attendance" className={`nav-item ${pathname === '/admin/attendance' ? 'active' : ''}`}>
-            <span className="nav-icon">👥</span>
-            <span className="nav-label">Attendance Management</span>
-          </Link>
-          
-          <Link href="/admin/subscriptions" className={`nav-item ${pathname === '/admin/subscriptions' ? 'active' : ''}`}>
-            <span className="nav-icon">💳</span>
-            <span className="nav-label">Subscription Management</span>
-          </Link>
-          
-          <Link href="/admin/reports" className={`nav-item ${pathname === '/admin/reports' ? 'active' : ''}`}>
-            <span className="nav-icon">📈</span>
-            <span className="nav-label">Reports</span>
-          </Link>
-          
-          <Link href="/admin/users" className={`nav-item ${pathname === '/admin/users' ? 'active' : ''}`}>
-            <span className="nav-icon">🔍</span>
-            <span className="nav-label">Student Search</span>
-          </Link>
-          
-          <Link href="/admin/support" className={`nav-item ${pathname === '/admin/support' ? 'active' : ''}`}>
-            <span className="nav-icon">🎧</span>
-            <span className="nav-label">Support Management</span>
-          </Link>
-        </nav>
-
-        {/* Quick Actions */}
-        <div className="sidebar-actions" style={{ padding: '1rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
-          <div style={{ marginBottom: '1rem', color: '#94a3b8', fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            QUICK ACTIONS
-          </div>
-          
-          <button
-            style={{
-              width: '100%',
-              padding: '0.75rem 1rem',
-              backgroundColor: 'rgba(34, 197, 94, 0.1)',
-              border: '1px solid rgba(34, 197, 94, 0.2)',
-              borderRadius: '8px',
-              color: '#4ade80',
-              fontSize: '0.9rem',
-              fontWeight: '500',
-              cursor: 'pointer',
-              marginBottom: '0.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              transition: 'all 0.3s ease'
-            }}
-          >
-            <span>💰</span>
-            Add Expense
-          </button>
-          
-          <button
-            style={{
-              width: '100%',
-              padding: '0.75rem 1rem',
-              backgroundColor: 'rgba(251, 191, 36, 0.1)',
-              border: '1px solid rgba(251, 191, 36, 0.2)',
-              borderRadius: '8px',
-              color: '#fcd34d',
-              fontSize: '0.9rem',
-              fontWeight: '500',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              transition: 'all 0.3s ease'
-            }}
-          >
-            <span>🚗</span>
-            Add Driver Salary
-          </button>
-        </div>
-
-        {/* Logout */}
-        <div style={{ padding: '1rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+        {/* Sidebar Footer - Only Logout */}
+        <div style={{
+          marginTop: 'auto',
+          padding: '1rem 1.5rem',
+          borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+        }}>
           <button
             onClick={handleLogout}
             style={{
               width: '100%',
               padding: '0.75rem 1rem',
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.2)',
+              color: '#fca5a5',
               borderRadius: '8px',
-              color: '#ef4444',
-              fontSize: '0.9rem',
-              fontWeight: '600',
               cursor: 'pointer',
+              transition: 'all 0.3s ease',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '0.5rem',
-              transition: 'all 0.3s ease'
+              fontSize: '0.9rem',
+              fontWeight: '500'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+              e.currentTarget.style.color = '#f87171';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+              e.currentTarget.style.color = '#fca5a5';
+              e.currentTarget.style.transform = 'translateY(0)';
             }}
           >
-            <span>🚪</span>
+            <span style={{ fontSize: '1rem' }}>🚪</span>
             Logout
           </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main style={{ marginLeft: '280px', flex: 1, minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+      <main style={{
+        flex: 1,
+        marginLeft: '0', // Mobile: no margin
+        padding: '20px',
+        paddingTop: '80px', // Space for mobile menu button
+        overflowY: 'auto',
+        background: '#f8f9fa',
+        minHeight: '100vh'
+      }}>
         {children}
       </main>
+
+      {/* Mobile-specific styles */}
+      <style jsx>{`
+        @media (min-width: 768px) {
+          aside {
+            transform: translateX(0) !important;
+          }
+          main {
+            margin-left: 280px !important;
+            padding-top: 20px !important;
+          }
+        }
+        
+        @media (max-width: 767px) {
+          main {
+            margin-left: 0 !important;
+            padding: 20px !important;
+            padding-top: 80px !important;
+          }
+        }
+      `}</style>
+      
     </div>
   );
 }
 
-export default function SupervisorDashboardLayout({ children }) {
+export default function SupervisorLayout({ children }) {
   return (
-    <SupervisorDashboardLayoutContent>
-      {children}
-    </SupervisorDashboardLayoutContent>
+    <AdminRoute>
+      <SupervisorLayoutContent>
+        {children}
+      </SupervisorLayoutContent>
+    </AdminRoute>
   );
 }

@@ -62,37 +62,21 @@ export default function UnifiedAuth() {
       let requestData;
       
       if (isLogin) {
-        // For login, we'll try different roles until one works
-        const roles = ['supervisor', 'admin', 'student'];
-        let loginSuccess = false;
-        let loginData = null;
+        requestData = {
+          email: formData.email,
+          password: formData.password,
+          role: 'student' // optional - backend returns actual role from DB
+        };
         
-        for (const role of roles) {
-          try {
-            requestData = {
-              email: formData.email,
-              password: formData.password,
-              role: role
-            };
-            
-            const result = await apiCall('/api/proxy/auth/login', {
-              method: 'POST',
-              body: JSON.stringify(requestData),
-            });
-            
-            const data = result.data;
-            
-            if (data.success) {
-              loginSuccess = true;
-              loginData = data;
-              break;
-            }
-          } catch (error) {
-            console.log(`Failed to login with role: ${role}`);
-          }
-        }
+        const result = await apiCall('/api/proxy/auth/login', {
+          method: 'POST',
+          body: JSON.stringify(requestData),
+        });
         
-        if (loginSuccess) {
+        const data = result.data;
+        
+        if (data.success) {
+          const loginData = data;
           setMessage('Login successful! Redirecting...');
           
           // Save user data
@@ -121,7 +105,7 @@ export default function UnifiedAuth() {
           setLoading(false);
           return;
         } else {
-          setMessage('Account not found. Please check your email or register first.');
+          setMessage(data.message || 'Account not found. Please check your email or register first.');
           setLoading(false);
           return;
         }
@@ -196,17 +180,27 @@ export default function UnifiedAuth() {
           color: 'white'
         }}>
           <div style={{
-            width: '80px',
-            height: '80px',
-            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            width: '100px',
+            height: '100px',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
             borderRadius: '50%',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto 20px',
-            fontSize: '36px'
+            padding: '10px',
+            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)'
           }}>
-            🚌
+            <img 
+              src="/uni-bus-logo.png.jpg" 
+              alt="UniBus Logo" 
+              style={{
+                width: '80px',
+                height: '80px',
+                objectFit: 'contain',
+                borderRadius: '50%'
+              }}
+            />
           </div>
           <h1 style={{
             margin: '0 0 10px 0',
@@ -425,82 +419,6 @@ export default function UnifiedAuth() {
             </div>
           )}
 
-          {/* Test Accounts */}
-          {isLogin && (
-            <div style={{
-              marginTop: '30px',
-              padding: '20px',
-              backgroundColor: '#f8fafc',
-              borderRadius: '12px',
-              fontSize: '14px'
-            }}>
-              <p style={{ margin: '0 0 15px 0', fontWeight: '600', color: '#374151', textAlign: 'center' }}>
-                Test Accounts (Email & Password Only):
-              </p>
-              <div style={{ display: 'grid', gap: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => setFormData({
-                    email: 'admin@unibus.edu',
-                    password: 'admin123',
-                    confirmPassword: '',
-                    fullName: ''
-                  })}
-                  style={{
-                    padding: '8px 12px',
-                    backgroundColor: '#3b82f6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  👨‍💼 admin@unibus.edu
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFormData({
-                    email: 'supervisor@unibus.edu',
-                    password: 'supervisor123',
-                    confirmPassword: '',
-                    fullName: ''
-                  })}
-                  style={{
-                    padding: '8px 12px',
-                    backgroundColor: '#10b981',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  👨‍🏫 supervisor@unibus.edu
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFormData({
-                    email: 'student@unibus.edu',
-                    password: 'student123',
-                    confirmPassword: '',
-                    fullName: ''
-                  })}
-                  style={{
-                    padding: '8px 12px',
-                    backgroundColor: '#f59e0b',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  🎓 student@unibus.edu
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

@@ -29,3 +29,33 @@ export async function POST(request) {
     }, { status: 500 });
   }
 }
+
+export async function PUT(request) {
+  try {
+    const body = await request.json();
+    
+    console.log('🔄 Proxying close shift PUT request to backend...');
+    
+    // Forward request to backend
+    const backendResponse = await fetch('http://localhost:3001/api/shifts/close', {
+      method: 'POST', // Backend expects POST
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    
+    const data = await backendResponse.json();
+    
+    console.log('📡 Backend close shift response:', backendResponse.status, data);
+    
+    return NextResponse.json(data, { status: backendResponse.status });
+    
+  } catch (error) {
+    console.error('❌ Close shift proxy error:', error);
+    return NextResponse.json({
+      success: false,
+      message: 'Close shift proxy server error'
+    }, { status: 500 });
+  }
+}

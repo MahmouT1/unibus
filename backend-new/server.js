@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://72.60.185.100:3000'],
+  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://72.60.185.100:3000', 'https://unibus.online', 'https://www.unibus.online'],
   credentials: true
 }));
 app.use(express.json());
@@ -17,12 +17,13 @@ app.use(express.urlencoded({ extended: true }));
 // MongoDB connection
 let db;
 const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
+const dbName = process.env.MONGODB_DB || process.env.DB_NAME || 'student_portal';
 
 // Connect to MongoDB
 MongoClient.connect(mongoUri)
   .then(client => {
     console.log('📡 Connected to MongoDB');
-    db = client.db('student-portal');
+    db = client.db(dbName);
     app.locals.db = db;
   })
   .catch(error => {
@@ -42,9 +43,12 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/proxy/auth', require('./routes/auth')); // الواجهة تستدعي /api/proxy/auth/login
+app.use('/auth-api', require('./routes/auth')); // توافق مع auth-api/login
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/admin', require('./routes/reset-term'));
 app.use('/api/students', require('./routes/students'));
-app.use('/api/attendance', require('./routes/attendance'));
+app.use('/api/attendance', require('./routes/attendance-clean'));
 app.use('/api/subscriptions', require('./routes/subscriptions'));
 app.use('/api/transportation', require('./routes/transportation'));
 app.use('/api/shifts', require('./routes/shifts'));

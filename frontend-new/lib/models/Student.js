@@ -1,75 +1,124 @@
 import mongoose from 'mongoose';
 
-const studentSchema = new mongoose.Schema({
-  userId: {
-    type: String,
-    required: true
-  },
+const StudentSchema = new mongoose.Schema({
   studentId: {
     type: String,
-    default: 'Not assigned',
-    unique: false // Allow multiple students with "Not assigned" ID
+    required: true,
+    unique: true,
+    trim: true
   },
   fullName: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
   email: {
     type: String,
     required: true,
     unique: true,
+    trim: true,
     lowercase: true
   },
   phoneNumber: {
-    type: String
+    type: String,
+    required: true,
+    trim: true
   },
   college: {
-    type: String
-  },
-  grade: {
-    type: String
+    type: String,
+    required: true,
+    trim: true
   },
   major: {
-    type: String
-  },
-  academicYear: {
     type: String,
-    default: '2024-2025'
+    required: true,
+    trim: true
+  },
+  grade: {
+    type: String,
+    required: true,
+    enum: ['first-year', 'second-year', 'third-year', 'fourth-year', 'fifth-year']
   },
   address: {
-    streetAddress: String,
-    buildingNumber: String,
-    fullAddress: String
+    type: String,
+    trim: true
   },
   profilePhoto: {
-    type: String
+    type: String,
+    default: null
+  },
+  status: {
+    type: String,
+    enum: ['active', 'inactive', 'suspended'],
+    default: 'active'
   },
   qrCode: {
-    type: String
+    type: String,
+    default: null
   },
   attendanceStats: {
     daysRegistered: {
       type: Number,
       default: 0
     },
+    attendanceRate: {
+      type: Number,
+      default: 0
+    },
+    totalAttendance: {
+      type: Number,
+      default: 0
+    },
     remainingDays: {
       type: Number,
-      default: 180
+      default: 30
+    }
+  },
+  subscription: {
+    status: {
+      type: String,
+      enum: ['active', 'inactive', 'pending', 'expired'],
+      default: 'pending'
     },
-    attendanceRate: {
+    startDate: {
+      type: Date,
+      default: null
+    },
+    endDate: {
+      type: Date,
+      default: null
+    },
+    type: {
+      type: String,
+      enum: ['monthly', 'semester', 'annual'],
+      default: 'monthly'
+    },
+    amount: {
       type: Number,
       default: 0
     }
   },
-  status: {
-    type: String,
-    default: 'Active'
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
   }
 }, {
   timestamps: true
 });
 
-// Create index on email for faster lookups
-studentSchema.index({ email: 1 });
+// Pre-save middleware to update the updatedAt field
+StudentSchema.pre('save', function(next) {
+  this.updatedAt = Date.now();
+  next();
+});
 
-export default mongoose.model('Student', studentSchema);
+// Index for better search performance
+StudentSchema.index({ studentId: 1 });
+StudentSchema.index({ email: 1 });
+StudentSchema.index({ fullName: 'text', studentId: 'text', college: 'text' });
+
+export default mongoose.models.Student || mongoose.model('Student', StudentSchema);

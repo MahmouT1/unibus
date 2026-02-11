@@ -147,61 +147,77 @@ const MobileQRScanner = ({ onScanSuccess, onScanError, supervisorId, supervisorN
     console.log('🎯 Mobile QR scan initiated...');
     setMessage('🔄 Scanning QR code...');
     
-    // Simulate QR scanning for production use
-    scanTimeoutRef.current = setTimeout(() => {
-      const realStudents = [
-        {
-          studentId: 'STU-2025-001',
-          id: 'STU-2025-001',
-          fullName: 'أحمد محمد علي',
-          name: 'أحمد محمد علي',
-          email: 'ahmed.mohamed@unibus.edu',
-          phoneNumber: '+201234567890',
-          college: 'كلية الهندسة',
-          grade: 'السنة الثالثة',
-          major: 'هندسة حاسوب',
-          address: 'القاهرة الجديدة',
-          profilePhoto: '/uploads/profiles/ahmed.jpg'
-        },
-        {
-          studentId: 'STU-2025-002',
-          id: 'STU-2025-002',
-          fullName: 'فاطمة أحمد محمود',
-          name: 'فاطمة أحمد محمود',
-          email: 'fatma.ahmed@unibus.edu',
-          phoneNumber: '+201234567891',
-          college: 'كلية الطب',
-          grade: 'السنة الثانية',
-          major: 'طب بشري',
-          address: 'الجيزة',
-          profilePhoto: '/uploads/profiles/fatma.jpg'
-        },
-        {
-          studentId: 'STU-2025-003',
-          id: 'STU-2025-003',
-          fullName: 'محمد عبد الرحمن',
-          name: 'محمد عبد الرحمن',
-          email: 'mohamed.hassan@unibus.edu',
-          phoneNumber: '+201234567892',
-          college: 'كلية التجارة',
-          grade: 'السنة الأولى',
-          major: 'إدارة أعمال',
-          address: 'الإسكندرية',
-          profilePhoto: '/uploads/profiles/mohamed.jpg'
+    // Real QR scanning implementation
+    const scanInterval = setInterval(() => {
+      if (videoRef.current && cameraState === 'active') {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        
+        canvas.width = videoRef.current.videoWidth;
+        canvas.height = videoRef.current.videoHeight;
+        
+        context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        
+        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: 'dontInvert',
+        });
+        
+        if (code) {
+          clearInterval(scanInterval);
+          console.log('✅ QR Code detected:', code.data);
+          
+          try {
+            // Try to parse the QR code data
+            let qrData = code.data;
+            
+            // If it's JSON, parse it
+            if (qrData.startsWith('{') && qrData.endsWith('}')) {
+              qrData = JSON.parse(qrData);
+            }
+            
+            // Format the data for the callback
+            const studentData = {
+              id: qrData.id || qrData.studentId,
+              studentId: qrData.studentId || qrData.id,
+              fullName: qrData.fullName || qrData.name,
+              name: qrData.fullName || qrData.name,
+              email: qrData.email,
+              phoneNumber: qrData.phoneNumber,
+              college: qrData.college,
+              grade: qrData.grade,
+              major: qrData.major,
+              address: qrData.address,
+              profilePhoto: qrData.profilePhoto
+            };
+            
+            setScanCount(prev => prev + 1);
+            setMessage(`✅ QR scanned on mobile! Student: ${studentData.fullName || studentData.name}`);
+            
+            console.log('✅ Mobile QR scan completed:', studentData);
+            
+            if (onScanSuccess) {
+              onScanSuccess(studentData);
+            }
+          } catch (error) {
+            console.error('❌ Error parsing QR data:', error);
+            setMessage('❌ Invalid QR code format. Please try again.');
+            onScanError?.('Invalid QR code format');
+          }
+        } else {
+          // Update progress message
+          setMessage('🔄 Scanning QR code... Please hold steady...');
         }
-      ];
-      
-      const scannedStudent = realStudents[Math.floor(Math.random() * realStudents.length)];
-      
-      setScanCount(prev => prev + 1);
-      setMessage(`✅ QR scanned on mobile! Student: ${scannedStudent.fullName}`);
-      
-      console.log('✅ Mobile QR scan completed:', scannedStudent);
-      
-      if (onScanSuccess) {
-        onScanSuccess(scannedStudent);
       }
-    }, 1500);
+    }, 500); // Scan every 500ms
+    
+    // Stop scanning after 30 seconds
+    setTimeout(() => {
+      clearInterval(scanInterval);
+      if (cameraState === 'active') {
+        setMessage('⏰ Scan timeout. Please try again.');
+      }
+    }, 30000);
   };
 
   return (

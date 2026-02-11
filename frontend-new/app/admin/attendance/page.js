@@ -101,47 +101,234 @@ function AdminAttendancePageContent() {
         setIsRefreshing(true);
       }
 
+      console.log('=== Loading Attendance Records ===');
+      console.log('Selected Date:', selectedDate);
+      console.log('Selected Supervisor:', selectedSupervisor);
+
       const token = localStorage.getItem('token');
-      const params = new URLSearchParams({
+      
+      // Try multiple endpoints to get records
+      let records = [];
+      let totalRecords = 0;
+
+      // 1. Try admin API first
+      try {
+        const adminParams = new URLSearchParams();
+        if (selectedDate) adminParams.append('date', selectedDate);
+        if (selectedSupervisor && selectedSupervisor !== 'All Supervisors') {
+          adminParams.append('supervisorId', selectedSupervisor);
+        }
+        adminParams.append('limit', '100');
+
+        const adminResponse = await fetch(`/admin/api/attendance/records?${adminParams}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (adminResponse.ok) {
+          const adminData = await adminResponse.json();
+          if (adminData.success && adminData.attendance) {
+            records = adminData.attendance;
+            totalRecords = adminData.total;
+            console.log('✅ Got records from admin API:', records.length);
+          }
+        }
+      } catch (adminError) {
+        console.log('Admin API failed, trying all-records...');
+      }
+
+      // 2. If no records from admin API, try all-records
+      if (records.length === 0) {
+        try {
+          const allRecordsParams = new URLSearchParams({
         page: pagination.currentPage.toString(),
         limit: pagination.limit.toString()
       });
 
       if (selectedDate) {
-        params.append('date', selectedDate);
+            allRecordsParams.append('date', selectedDate);
       }
 
       if (selectedSupervisor && selectedSupervisor !== 'All Supervisors') {
-        params.append('supervisorId', selectedSupervisor);
+            allRecordsParams.append('supervisorId', selectedSupervisor);
       }
 
-      const response = await fetch(`/api/attendance/all-records?${params}`, {
+          const allRecordsResponse = await fetch(`/api/attendance/all-records?${allRecordsParams}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setAttendanceRecords(data.records);
-          setPagination(data.pagination);
+          if (allRecordsResponse.ok) {
+            const allRecordsData = await allRecordsResponse.json();
+            if (allRecordsData.success) {
+              records = allRecordsData.records;
+              totalRecords = allRecordsData.pagination?.totalRecords || records.length;
+              console.log('✅ Got records from all-records API:', records.length);
+            }
+          }
+        } catch (allRecordsError) {
+          console.log('All-records API failed, trying simple records...');
+        }
+      }
+
+      // 3. If still no records, try simple records API
+      if (records.length === 0) {
+        try {
+          const simpleParams = new URLSearchParams();
+          if (selectedDate) simpleParams.append('date', selectedDate);
+          if (selectedSupervisor && selectedSupervisor !== 'All Supervisors') {
+            simpleParams.append('supervisorId', selectedSupervisor);
+          }
+          simpleParams.append('limit', '100');
+          simpleParams.append('sort', 'desc');
+
+          const simpleResponse = await fetch(`/api/attendance/records?${simpleParams}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (simpleResponse.ok) {
+            const simpleData = await simpleResponse.json();
+            if (simpleData.success && simpleData.attendance) {
+              records = simpleData.attendance;
+              totalRecords = simpleData.total;
+              console.log('✅ Got records from simple API:', records.length);
+            }
+          }
+        } catch (simpleError) {
+          console.error('All APIs failed:', simpleError);
+        }
+      }
+
+      // If still nothing, retry WITHOUT date filter to fetch recent records (handles timezone/date mismatches)
+      if (records.length === 0) {
+        try {
+          console.log('ℹ️ No records with current filters. Retrying without date filter...');
+          const tokenNoDate = localStorage.getItem('token');
+
+          // admin API without date
+          try {
+            const p = new URLSearchParams();
+            p.append('limit', '100');
+            if (selectedSupervisor && selectedSupervisor !== 'All Supervisors') {
+              p.append('supervisorId', selectedSupervisor);
+            }
+            const r = await fetch(`/admin/api/attendance/records?${p}`, { headers: { 'Authorization': `Bearer ${tokenNoDate}` } });
+            if (r.ok) {
+              const d = await r.json();
+              if (d.success && d.attendance?.length) {
+                records = d.attendance;
+                totalRecords = d.total || d.attendance.length;
+              }
+            }
+          } catch {}
+
+          // all-records without date
+          if (records.length === 0) {
+            try {
+              const p2 = new URLSearchParams({ page: '1', limit: '100' });
+              if (selectedSupervisor && selectedSupervisor !== 'All Supervisors') {
+                p2.append('supervisorId', selectedSupervisor);
+              }
+              const r2 = await fetch(`/api/attendance/all-records?${p2}`, { headers: { 'Authorization': `Bearer ${tokenNoDate}` } });
+              if (r2.ok) {
+                const d2 = await r2.json();
+                if (d2.success && d2.records?.length) {
+                  records = d2.records;
+                  totalRecords = d2.pagination?.totalRecords || d2.records.length;
+                }
+              }
+            } catch {}
+          }
+
+          // simple records without date
+          if (records.length === 0) {
+            try {
+              const p3 = new URLSearchParams({ limit: '100', sort: 'desc' });
+              if (selectedSupervisor && selectedSupervisor !== 'All Supervisors') {
+                p3.append('supervisorId', selectedSupervisor);
+              }
+              const r3 = await fetch(`/api/attendance/records?${p3}`, { headers: { 'Authorization': `Bearer ${tokenNoDate}` } });
+              if (r3.ok) {
+                const d3 = await r3.json();
+                if (d3.success && d3.attendance?.length) {
+                  records = d3.attendance;
+                  totalRecords = d3.total || d3.attendance.length;
+                }
+              }
+            } catch {}
+          }
+        } catch {}
+      }
+
+      // Process and set records
+      if (records.length > 0) {
+        // Ensure all records have required fields
+        const processedRecords = records.map((record, index) => ({
+          _id: record._id || `record_${index}_${Date.now()}`,
+          studentName: record.studentName || record.name || 'Unknown Student',
+          studentEmail: record.studentEmail || record.email || '',
+          studentId: record.studentId || record.id || 'N/A',
+          college: record.college || 'N/A',
+          major: record.major || 'N/A',
+          grade: record.grade || 'N/A',
+          scanTime: record.scanTime || record.checkInTime || new Date(),
+          location: record.location || 'Main Station',
+          notes: record.notes || '',
+          status: 'Present',
+          shiftId: record.shiftId || 'N/A',
+          supervisorId: record.supervisorId || 'N/A',
+          supervisorName: record.supervisorName || 'Unknown Supervisor',
+          shiftStart: record.shiftStart || record.startTime,
+          shiftEnd: record.shiftEnd || record.endTime,
+          shiftStatus: record.shiftStatus || record.status || 'closed',
+          shiftDuration: record.shiftDuration || (record.shiftStart && record.shiftEnd ? 
+            Math.floor((new Date(record.shiftEnd) - new Date(record.shiftStart)) / (1000 * 60)) : 0)
+        }));
+
+        setAttendanceRecords(processedRecords);
+        
+        // Update pagination
+        const totalPages = Math.ceil(totalRecords / pagination.limit);
+        setPagination(prev => ({
+          ...prev,
+          totalRecords,
+          totalPages,
+          hasNextPage: pagination.currentPage < totalPages,
+          hasPrevPage: pagination.currentPage > 1
+        }));
           
           // Calculate summary stats
-          const uniqueStudents = new Set(data.records.map(record => record.studentEmail));
-          const uniqueShifts = new Set(data.records.map(record => record.shiftId));
+        const uniqueStudents = new Set(processedRecords.map(record => record.studentEmail));
+        const uniqueShifts = new Set(processedRecords.map(record => record.shiftId));
           
           setSummaryStats({
-            totalRecords: data.pagination.totalRecords,
+          totalRecords,
             totalStudents: uniqueStudents.size,
             totalShifts: uniqueShifts.size,
-            todayRecords: data.records.filter(record => 
+          todayRecords: processedRecords.filter(record => 
               new Date(record.scanTime).toDateString() === new Date().toDateString()
             ).length,
-            activeSupervisors: uniqueShifts.size // Use uniqueShifts instead of activeShifts
-          });
-        }
+          activeSupervisors: uniqueShifts.size
+        });
+
+        console.log('✅ Records loaded successfully:', processedRecords.length);
+      } else {
+        console.log('❌ No records found');
+        setAttendanceRecords([]);
+        setSummaryStats({
+          totalRecords: 0,
+          totalStudents: 0,
+          totalShifts: 0,
+          todayRecords: 0,
+          activeSupervisors: 0
+        });
       }
     } catch (error) {
       console.error('Error loading attendance records:', error);
@@ -632,6 +819,61 @@ function AdminAttendancePageContent() {
               🔄 {t('refreshData')}
             </button>
           </div>
+          <div>
+            <button
+              onClick={async () => {
+                console.log('=== DEBUG: Testing All APIs ===');
+                const token = localStorage.getItem('token');
+                
+                // Test admin API
+                try {
+                  const adminResponse = await fetch(`/admin/api/attendance/records?date=${selectedDate}&limit=10`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                  });
+                  const adminData = await adminResponse.json();
+                  console.log('Admin API Response:', adminData);
+                } catch (e) { console.log('Admin API Error:', e); }
+                
+                // Test all-records API
+                try {
+                  const allResponse = await fetch(`/api/attendance/all-records?date=${selectedDate}&limit=10`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                  });
+                  const allData = await allResponse.json();
+                  console.log('All-Records API Response:', allData);
+                } catch (e) { console.log('All-Records API Error:', e); }
+                
+                // Test simple records API
+                try {
+                  const simpleResponse = await fetch(`/api/attendance/records?date=${selectedDate}&limit=10`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                  });
+                  const simpleData = await simpleResponse.json();
+                  console.log('Simple Records API Response:', simpleData);
+                } catch (e) { console.log('Simple Records API Error:', e); }
+                
+                alert('Check console for API responses');
+              }}
+              style={{
+                width: '100%',
+                padding: '12px 20px',
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              🔍 Debug APIs
+            </button>
+          </div>
           {selectedSupervisor !== 'All Supervisors' && (
             <div>
               <button
@@ -1036,8 +1278,16 @@ function AdminAttendancePageContent() {
                   recordsToShow.map((record, index) => (
                   <tr key={record._id} style={{ 
                     borderBottom: '1px solid #f1f5f9',
-                    transition: 'background-color 0.2s ease'
-                  }}>
+                    transition: 'background-color 0.2s ease',
+                    backgroundColor: index % 2 === 0 ? '#fafafa' : 'white'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f0f9ff';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#fafafa' : 'white';
+                  }}
+                  >
                     <td style={{ padding: '16px 12px', color: '#6b7280', fontWeight: '500' }}>
                       {(pagination.currentPage - 1) * pagination.limit + index + 1}
                     </td>
@@ -1231,15 +1481,60 @@ function AdminAttendancePageContent() {
                 ) : (
                   <tr>
                     <td colSpan="11" style={{ 
-                      padding: '40px 20px', 
+                      padding: '60px 20px', 
                       textAlign: 'center', 
                       color: '#6b7280',
-                      fontSize: '16px'
+                      fontSize: '16px',
+                      background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+                      borderRadius: '12px'
                     }}>
+                      <div style={{ marginBottom: '20px', fontSize: '48px', opacity: '0.5' }}>
+                        📋
+                      </div>
+                      <div style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px', color: '#374151' }}>
                       {selectedSupervisor !== 'All Supervisors' 
                         ? 'No records found for this shift.' 
-                        : t('noAttendanceRecords')
-                      }
+                          : 'No attendance records found'
+                        }
+                      </div>
+                      <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '20px' }}>
+                        {selectedDate ? `For ${formatDate(selectedDate)}` : 'Try selecting a different date or supervisor'}
+                      </div>
+                      <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                        <button
+                          onClick={handleRefresh}
+                          style={{
+                            padding: '8px 16px',
+                            background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          🔄 Refresh
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedDate(new Date().toISOString().split('T')[0]);
+                            setSelectedSupervisor('All Supervisors');
+                          }}
+                          style={{
+                            padding: '8px 16px',
+                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          📅 Today
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

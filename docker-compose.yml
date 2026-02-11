@@ -1,0 +1,35 @@
+services:
+  backend:
+    build:
+      context: ./backend-new
+      dockerfile: Dockerfile
+    container_name: unitrans-backend
+    network_mode: host
+    env_file: ./backend-new/.env
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - MONGODB_URI=mongodb://127.0.0.1:27017
+      - MONGODB_DB=student_portal
+    volumes:
+      - ./backend-new/uploads:/app/uploads
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend-new
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_BACKEND_URL=https://unibus.online
+        - NEXT_PUBLIC_API_URL=https://unibus.online
+    container_name: unitrans-frontend
+    network_mode: host
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - BACKEND_URL=http://127.0.0.1:3001
+      - MONGODB_URI=mongodb://127.0.0.1:27017
+      - MONGODB_DB=student_portal
+    depends_on:
+      - backend
+    restart: unless-stopped

@@ -3,17 +3,17 @@ const { MongoClient } = require('mongodb');
 const bcrypt = require('bcryptjs');
 const router = express.Router();
 
-// Login endpoint
+// Login endpoint - role optional (will find user by email)
 router.post('/login', async (req, res) => {
   try {
     const { email, password, role } = req.body;
     
-    console.log('🔐 Backend login attempt:', { email, role });
+    console.log('🔐 Backend login attempt:', { email, role: role || '(auto)' });
     
-    if (!email || !password || !role) {
+    if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Email, password, and role are required'
+        message: 'Email and password are required'
       });
     }
 
@@ -28,13 +28,11 @@ router.post('/login', async (req, res) => {
     
     console.log('📡 Database connected');
     
-    // Find user by email first (ignore role parameter)
+    // Find user by email - ONLY student_portal (single DB)
     const user = await db.collection('users').findOne({
       email: email.toLowerCase()
     });
-    
     console.log('👤 User search result:', user ? `FOUND (Role: ${user?.role})` : 'NOT FOUND');
-    
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -115,7 +113,7 @@ router.post('/check-user', async (req, res) => {
     
     console.log('📡 Database connected for user check');
     
-    // Find user by email only (no role required)
+    // Find user by email - ONLY student_portal (single DB)
     const user = await db.collection('users').findOne({
       email: email.toLowerCase()
     });

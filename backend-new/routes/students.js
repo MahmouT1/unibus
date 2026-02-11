@@ -4,10 +4,105 @@ const multer = require('multer');
 const path = require('path');
 const QRCode = require('qrcode');
 const { MongoClient, ObjectId } = require('mongodb');
-const authMiddleware = require('../middleware/auth');
+const { getDatabase } = require('../lib/mongodb-simple-connection');
+const authMiddleware = require('../middleware/auth-simple');
 const { body, validationResult } = require('express-validator');
 
 const router = express.Router();
+
+// Get all students (for admin)
+router.get('/profile-simple', async (req, res) => {
+  try {
+    const { admin, email } = req.query;
+    const db = await getDatabase();
+    const studentsCollection = db.collection('students');
+    const usersCollection = db.collection('users');
+
+    if (admin === 'true') {
+      // Return all students for admin view
+      const [studentsFromStudents, studentsFromUsers] = await Promise.all([
+        studentsCollection.find({}).toArray(),
+        usersCollection.find({ role: 'student' }).toArray()
+      ]);
+      
+      // Combine and deduplicate students
+      const allStudents = [...studentsFromStudents, ...studentsFromUsers];
+      const uniqueStudents = allStudents.filter((student, index, self) => 
+        index === self.findIndex(s => s.email === student.email)
+      );
+      
+      // Convert to object format for compatibility
+      const studentsObject = {};
+      uniqueStudents.forEach(student => {
+        studentsObject[student.email] = {
+          id: student._id.toString(),
+          fullName: student.fullName || student.name || 'Unknown',
+          studentId: student.studentId || `STU-${student._id.toString().slice(-6)}`,
+          phoneNumber: student.phoneNumber || student.phone || '',
+          college: student.college || '',
+          grade: student.grade || student.academicYear || '',
+          major: student.major || '',
+          academicYear: student.academicYear || student.grade || '',
+          address: student.address || '',
+          profilePhoto: student.profilePhoto || '',
+          qrCode: student.qrCode || `QR-${student._id.toString().slice(-6)}`,
+          attendanceStats: student.attendanceStats || { totalScans: 0, lastScanDate: null },
+          status: student.status || 'active',
+          email: student.email,
+          updatedAt: student.updatedAt || new Date()
+        };
+      });
+      
+      return res.json({ 
+        success: true, 
+        students: studentsObject 
+      });
+    } else if (email) {
+      // Return specific student by email
+      const student = await studentsCollection.findOne({ email: email.toLowerCase() });
+      
+      if (student) {
+        return res.json({ 
+          success: true, 
+          student: {
+            id: student._id.toString(),
+            fullName: student.fullName,
+            studentId: student.studentId,
+            phoneNumber: student.phoneNumber,
+            college: student.college,
+            grade: student.grade,
+            major: student.major,
+            academicYear: student.academicYear,
+            address: student.address,
+            profilePhoto: student.profilePhoto,
+            qrCode: student.qrCode,
+            attendanceStats: student.attendanceStats,
+            status: student.status,
+            email: student.email,
+            updatedAt: student.updatedAt
+          }
+        });
+      } else {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'Student not found' 
+        });
+      }
+    } else {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Email or admin parameter is required' 
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching student profile:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch student profile', 
+      error: error.message 
+    });
+  }
+});
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -231,16 +326,173 @@ router.post('/generate-qr', authMiddleware, async (req, res) => {
     }
 });
 
+// Search students with attendance data
+router.get('/search', async (req, res) => {
+  try {
+    const { search, page = 1, limit = 20 } = req.query;
+    const db = await getDatabase();
+    const studentsCollection = db.collection('students');
+    const usersCollection = db.collection('users');
+    const shiftsCollection = db.collection('shifts');
+
+    console.log('🔍 Student search request:', { search, page, limit });
+
+    // Build search query
+    let searchQuery = {};
+    if (search) {
+      const searchRegex = new RegExp(search, 'i');
+      searchQuery = {
+        $or: [
+          { fullName: searchRegex },
+          { name: searchRegex },
+          { email: searchRegex },
+          { studentId: searchRegex },
+          { college: searchRegex },
+          { major: searchRegex },
+          { grade: searchRegex }
+        ]
+      };
+    }
+
+    // Get students from both collections
+    const [studentsFromStudents, studentsFromUsers] = await Promise.all([
+      studentsCollection.find(searchQuery).toArray(),
+      usersCollection.find({ ...searchQuery, role: 'student' }).toArray()
+    ]);
+
+    // Combine and deduplicate students
+    const allStudents = [...studentsFromStudents, ...studentsFromUsers];
+    const uniqueStudents = allStudents.filter((student, index, self) => 
+      index === self.findIndex(s => (s.email && student.email && s.email === student.email) || 
+                                   (s.studentId && student.studentId && s.studentId === student.studentId))
+    );
+
+    console.log(`📊 Found ${uniqueStudents.length} unique students`);
+
+    // Calculate attendance for each student
+    const studentsWithAttendance = await Promise.all(
+      uniqueStudents.map(async (student) => {
+        try {
+          const studentEmail = (student.email || '').toLowerCase();
+          const studentId = student.studentId || student._id?.toString() || '';
+          
+          // Get attendance from both shifts and attendance collection
+          const [shifts, attendanceRecords] = await Promise.all([
+            shiftsCollection.find({
+              'attendanceRecords.studentEmail': studentEmail
+            }).toArray(),
+            db.collection('attendance').find({
+              $or: [
+                { studentEmail: studentEmail },
+                { studentId: studentId }
+              ]
+            }).toArray()
+          ]);
+
+          const attendanceDates = new Set();
+
+          // Process attendance from shifts collection
+          shifts.forEach(shift => {
+            if (shift.attendanceRecords) {
+              shift.attendanceRecords.forEach(record => {
+                if (record.studentEmail === studentEmail) {
+                  const date = record.scanTime || record.checkInTime || shift.shiftStart;
+                  if (date) {
+                    const dateKey = new Date(date).toISOString().split('T')[0];
+                    attendanceDates.add(dateKey);
+                  }
+                }
+              });
+            }
+          });
+
+          // Process attendance from attendance collection
+          attendanceRecords.forEach(record => {
+            const date = record.scanTime || record.checkInTime;
+            if (date) {
+              const dateKey = new Date(date).toISOString().split('T')[0];
+              attendanceDates.add(dateKey);
+            }
+          });
+
+          const attendanceCount = attendanceDates.size;
+
+          console.log(`📊 Student ${student.fullName || student.name}: ${attendanceCount} attendance days`);
+
+          return {
+            _id: student._id,
+            fullName: student.fullName || student.name || 'Unknown',
+            email: student.email || '',
+            studentId: student.studentId || `STU-${student._id.toString().slice(-6)}`,
+            college: student.college || '',
+            major: student.major || '',
+            grade: student.grade || student.academicYear || '',
+            phoneNumber: student.phoneNumber || student.phone || '',
+            profilePhoto: student.profilePhoto || '',
+            attendanceCount: attendanceCount,
+            status: student.status || 'active',
+            createdAt: student.createdAt || new Date(),
+            lastAttendance: attendanceDates.size > 0 ? Array.from(attendanceDates).sort().pop() : null,
+            _debug: {
+              attendanceDates: Array.from(attendanceDates).sort(),
+              shiftsCount: shifts.length,
+              attendanceRecordsCount: attendanceRecords.length
+            }
+          };
+        } catch (error) {
+          console.error(`Error calculating attendance for student ${student._id}:`, error);
+          return {
+            ...student,
+            attendanceCount: 0,
+            lastAttendance: null
+          };
+        }
+      })
+    );
+
+    // Sort by attendance count (highest first), then by name
+    studentsWithAttendance.sort((a, b) => {
+      if (b.attendanceCount !== a.attendanceCount) {
+        return b.attendanceCount - a.attendanceCount;
+      }
+      return (a.fullName || '').localeCompare(b.fullName || '');
+    });
+
+    // Pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const paginatedStudents = studentsWithAttendance.slice(skip, skip + parseInt(limit));
+    const totalStudents = studentsWithAttendance.length;
+    const totalPages = Math.ceil(totalStudents / parseInt(limit));
+
+    console.log(`📄 Returning page ${page}/${totalPages} with ${paginatedStudents.length} students`);
+
+    res.json({
+      success: true,
+      data: {
+        students: paginatedStudents,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages,
+          totalStudents,
+          hasNextPage: parseInt(page) < totalPages,
+          hasPrevPage: parseInt(page) > 1
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Student search error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to search students',
+      error: error.message
+    });
+  }
+});
+
 // Get student attendance records
 router.get('/attendance', authMiddleware, async (req, res) => {
     try {
-        if (req.user.role !== 'student') {
-            return res.status(403).json({
-                success: false,
-                message: 'Access denied. Students only.'
-            });
-        }
-
         const student = await Student.findOne({ userId: req.user._id });
         if (!student) {
             return res.status(404).json({

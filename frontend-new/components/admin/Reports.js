@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './Reports.css';
+import ExpenseForm from './ExpenseForm';
+import DriverSalaryForm from './DriverSalaryForm';
 
 const Reports = () => {
   const [activeSection, setActiveSection] = useState('revenue');
@@ -16,6 +18,10 @@ const Reports = () => {
     totalDriverSalaries: 0,
     netProfit: 0
   });
+
+  // Form states
+  const [showExpenseForm, setShowExpenseForm] = useState(false);
+  const [showDriverForm, setShowDriverForm] = useState(false);
 
   // Get current week date range
   const getWeekDateRange = (weekOffset = 0) => {
@@ -41,8 +47,9 @@ const Reports = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
+      console.log('📊 Fetching reports data for:', currentWeek);
       const [revenueRes, expenseRes, driverRes] = await Promise.all([
-        fetch('/api/subscription/payment?admin=true'),
+        fetch('/api/students/subscriptions-data?admin=true'), // Use working subscription API
         fetch(`/api/expenses?startDate=${currentWeek.start}&endDate=${currentWeek.end}`),
         fetch(`/api/driver-salaries?startDate=${currentWeek.start}&endDate=${currentWeek.end}`)
       ]);
@@ -53,23 +60,42 @@ const Reports = () => {
         driverRes.json()
       ]);
 
-      if (revenueData.success) {
-        setRevenueData(revenueData.subscriptions || []);
+      console.log('📊 Revenue API response:', revenueData);
+      console.log('📊 Expense API response:', expenseData);
+      console.log('📊 Driver API response:', driverData);
+
+      // Handle subscription revenue data
+      let subscriptionRecords = [];
+      if (revenueData.success && revenueData.students) {
+        subscriptionRecords = Object.values(revenueData.students);
+        setRevenueData(subscriptionRecords);
+        console.log(`✅ Loaded ${subscriptionRecords.length} subscription records`);
       }
 
+      // Handle expense data
       if (expenseData.success) {
-        setExpenseData(expenseData.expenses || []);
+        setExpenseData(expenseData.expenses || expenseData.data || []);
+        console.log(`✅ Loaded ${(expenseData.expenses || expenseData.data || []).length} expenses`);
       }
 
+      // Handle driver salary data
       if (driverData.success) {
-        setDriverSalaryData(driverData.salaries || []);
+        setDriverSalaryData(driverData.salaries || driverData.data || []);
+        console.log(`✅ Loaded ${(driverData.salaries || driverData.data || []).length} driver salaries`);
       }
 
       // Calculate summary stats
-      const totalRevenue = (revenueData.subscriptions || []).reduce((sum, sub) => sum + (sub.totalPaid || 0), 0);
-      const totalExpenses = (expenseData.expenses || []).reduce((sum, exp) => sum + (exp.amount || 0), 0);
-      const totalDriverSalaries = (driverData.salaries || []).reduce((sum, sal) => sum + (sal.amount || 0), 0);
+      const totalRevenue = subscriptionRecords.reduce((sum, sub) => sum + (sub.totalPaid || 0), 0);
+      const totalExpenses = (expenseData.expenses || expenseData.data || []).reduce((sum, exp) => sum + (exp.amount || 0), 0);
+      const totalDriverSalaries = (driverData.salaries || driverData.data || []).reduce((sum, sal) => sum + (sal.amount || 0), 0);
       const netProfit = totalRevenue - totalExpenses - totalDriverSalaries;
+
+      console.log(`💰 Financial Summary:`, {
+        totalRevenue,
+        totalExpenses,
+        totalDriverSalaries,
+        netProfit
+      });
 
       setSummaryStats({
         totalRevenue,
@@ -111,6 +137,16 @@ const Reports = () => {
     window.print();
     document.body.innerHTML = originalContent;
     window.location.reload();
+  };
+
+  const handleExpenseSuccess = () => {
+    setShowExpenseForm(false);
+    fetchData(); // Refresh data after adding expense
+  };
+
+  const handleDriverSuccess = () => {
+    setShowDriverForm(false);
+    fetchData(); // Refresh data after adding driver salary
   };
 
 
@@ -326,9 +362,22 @@ const Reports = () => {
             <div className="section-header">
               <h2>Side Expenses</h2>
               <div className="section-actions">
-                <p className="section-note">
-                  💡 Use the "Add Expense" button in the sidebar to add new expenses
-                </p>
+                <button 
+                  onClick={() => setShowExpenseForm(true)}
+                  className="add-btn"
+                  style={{
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '10px 20px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    fontSize: '14px'
+                  }}
+                >
+                  ➕ Add Expense
+                </button>
               </div>
             </div>
             <div className="table-container">
@@ -378,9 +427,22 @@ const Reports = () => {
             <div className="section-header">
               <h2>Driver Salaries</h2>
               <div className="section-actions">
-                <p className="section-note">
-                  💡 Use the "Add Driver Salary" button in the sidebar to add new driver salaries
-                </p>
+                <button 
+                  onClick={() => setShowDriverForm(true)}
+                  className="add-btn"
+                  style={{
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '10px 20px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    fontSize: '14px'
+                  }}
+                >
+                  ➕ Add Driver Salary
+                </button>
               </div>
             </div>
             <div className="table-container">
@@ -473,6 +535,67 @@ const Reports = () => {
           </div>
         )}
       </div>
+
+      {/* Form Modals */}
+      {showExpenseForm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '20px',
+            maxWidth: '500px',
+            width: '90%',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <ExpenseForm 
+              onClose={() => setShowExpenseForm(false)}
+              onSuccess={handleExpenseSuccess}
+            />
+          </div>
+        </div>
+      )}
+
+      {showDriverForm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '20px',
+            maxWidth: '500px',
+            width: '90%',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <DriverSalaryForm 
+              onClose={() => setShowDriverForm(false)}
+              onSuccess={handleDriverSuccess}
+            />
+          </div>
+        </div>
+      )}
 
     </div>
   );

@@ -1,0 +1,7 @@
+node_modules
+npm-debug.log
+.git
+*.md
+.env.example
+data/*.json
+*.backup*

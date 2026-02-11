@@ -1,30 +1,47 @@
 import { NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/mongodb-simple-connection';
 
 export async function GET() {
   try {
-    // Fetch real attendance data from database
-    const db = await getDatabase();
-    const attendanceCollection = db.collection('attendance');
-    
-    // Get today's date range
-    const today = new Date();
-    const startOfDay = new Date(today);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(today);
-    endOfDay.setHours(23, 59, 59, 999);
-    
-    // Query attendance records for today
-    const records = await attendanceCollection.find({
-      scanTime: {
-        $gte: startOfDay,
-        $lte: endOfDay
+    // Mock today's attendance records
+    const records = [
+      {
+        id: '1',
+        studentName: 'Ahmed Mohammed',
+        studentId: 'ST001',
+        college: 'Engineering',
+        major: 'Computer Science',
+        grade: 'third-year',
+        status: 'Present',
+        scanTime: new Date().toISOString(),
+        email: 'ahmed@example.com'
+      },
+      {
+        id: '2',
+        studentName: 'Sara Ali',
+        studentId: 'ST002',
+        college: 'Business',
+        major: 'Management',
+        grade: 'second-year',
+        status: 'Present',
+        scanTime: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+        email: 'sara@example.com'
+      },
+      {
+        id: '3',
+        studentName: 'Omar Hassan',
+        studentId: 'ST003',
+        college: 'Medicine',
+        major: 'General Medicine',
+        grade: 'fourth-year',
+        status: 'Late',
+        scanTime: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+        email: 'omar@example.com'
       }
-    }).sort({ scanTime: -1 }).toArray();
+    ];
 
     return NextResponse.json({
       success: true,
-      attendance: records
+      records
     });
   } catch (error) {
     console.error('Today attendance error:', error);

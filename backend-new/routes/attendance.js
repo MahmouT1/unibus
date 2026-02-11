@@ -1,7 +1,7 @@
 // routes/attendance.js
 const express = require('express');
-const Attendance = require('../models/Attendance');
-const Student = require('../models/Student');
+const { getDatabase } = require('../lib/mongodb-simple-connection');
+const { ObjectId } = require('mongodb');
 const authMiddleware = require('../middleware/auth');
 const { body, validationResult } = require('express-validator');
 

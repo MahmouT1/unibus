@@ -33,9 +33,12 @@ function AdminDashboardLayoutContent({ children }) {
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
+    localStorage.removeItem('token');
+    localStorage.removeItem('userToken');
     localStorage.removeItem('userRole');
     localStorage.removeItem('user');
-    router.push('/admin-login');
+    sessionStorage.clear();
+    window.location.href = '/auth';
   };
 
   if (loading) {
@@ -99,6 +102,11 @@ function AdminDashboardLayoutContent({ children }) {
           <Link href="/admin/support" className={`nav-item ${pathname === '/admin/support' ? 'active' : ''}`}>
             <span className="nav-icon">🎧</span>
             <span className="nav-label">Support Management</span>
+          </Link>
+          
+          <Link href="/admin/transportation" className={`nav-item ${pathname === '/admin/transportation' ? 'active' : ''}`}>
+            <span className="nav-icon">🚌</span>
+            <span className="nav-label">Transportation Management</span>
           </Link>
         </nav>
 
