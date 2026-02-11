@@ -490,6 +490,114 @@ router.get('/search', async (req, res) => {
   }
 });
 
+// POST /search - Get single student with full attendance records (for eye button modal)
+router.post('/search', async (req, res) => {
+  try {
+    const { _id, studentId, email } = req.body;
+    const lookupId = _id || studentId;
+    if (!lookupId && !email) {
+      return res.status(400).json({ success: false, message: 'Student ID or email is required' });
+    }
+    const db = await getDatabase();
+    const studentsCollection = db.collection('students');
+    const usersCollection = db.collection('users');
+    const shiftsCollection = db.collection('shifts');
+    const attendanceCollection = db.collection('attendance');
+    let student = null;
+    if (lookupId) {
+      try {
+        student = await studentsCollection.findOne({ _id: new ObjectId(lookupId) });
+        if (!student) student = await usersCollection.findOne({ _id: new ObjectId(lookupId), role: 'student' });
+      } catch (e) {}
+    }
+    if (!student && email) {
+      const em = (email || '').toLowerCase();
+      student = await studentsCollection.findOne({ email: em });
+      if (!student) student = await usersCollection.findOne({ email: em, role: 'student' });
+    }
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+    const studentEmail = (student.email || '').toLowerCase();
+    const studentName = (student.fullName || student.name || '').toLowerCase();
+    const studentStuId = (student.studentId || '').toString();
+    const allRecords = [];
+    const seenIds = new Set();
+    const shifts = await shiftsCollection.find({ status: { $in: ['closed', 'open'] } }).toArray();
+    for (const shift of shifts) {
+      if (shift.attendanceRecords && shift.attendanceRecords.length > 0) {
+        for (const record of shift.attendanceRecords) {
+          const recId = `${shift._id}_${record.studentEmail}_${record.scanTime}`;
+          if (seenIds.has(recId)) continue;
+          seenIds.add(recId);
+          const rEmail = (record.studentEmail || record.email || '').toLowerCase();
+          const rName = (record.studentName || '').toLowerCase();
+          const rId = (record.studentId || '').toString();
+          const match = (studentEmail && rEmail === studentEmail) ||
+            (studentStuId && studentStuId !== 'N/A' && rId === studentStuId) ||
+            (studentName && rName && (rName.includes(studentName) || studentName.includes(rName)));
+          if (match) {
+            allRecords.push({
+              studentName: record.studentName,
+              studentEmail: record.studentEmail || record.email,
+              college: record.college || 'N/A',
+              scanTime: record.scanTime,
+              checkInTime: record.checkInTime || record.scanTime,
+              status: 'Present'
+            });
+          }
+        }
+      }
+    }
+    const attendanceDocs = await attendanceCollection.find({}).limit(5000).toArray();
+    for (const doc of attendanceDocs) {
+      const scanTime = doc.scanTime || doc.checkInTime || doc.createdAt;
+      const rEmail = (doc.studentEmail || doc.studentInfo?.email || '').toLowerCase();
+      const rId = (doc.studentId || doc.studentInfo?.studentId || '').toString();
+      const rName = (doc.studentName || doc.studentInfo?.fullName || '').toLowerCase();
+      const match = (studentEmail && rEmail === studentEmail) ||
+        (studentStuId && studentStuId !== 'N/A' && rId === studentStuId) ||
+        (studentName && rName && (rName.includes(studentName) || studentName.includes(rName)));
+      if (match && scanTime) {
+        const recId = `att_${doc._id}_${rEmail}_${scanTime}`;
+        if (seenIds.has(recId)) continue;
+        seenIds.add(recId);
+        allRecords.push({
+          studentName: doc.studentName || doc.studentInfo?.fullName || '',
+          studentEmail: doc.studentEmail || doc.studentInfo?.email || '',
+          college: doc.college || doc.studentInfo?.college || 'N/A',
+          scanTime,
+          checkInTime: scanTime,
+          status: 'Present'
+        });
+      }
+    }
+    allRecords.sort((a, b) => new Date(b.scanTime || b.checkInTime) - new Date(a.scanTime || a.checkInTime));
+    return res.json({
+      success: true,
+      data: {
+        student: {
+          _id: student._id.toString(),
+          fullName: student.fullName || student.name || 'Unknown',
+          email: student.email || '',
+          studentId: student.studentId || 'N/A',
+          college: student.college || 'N/A',
+          major: student.major || 'N/A',
+          grade: student.grade || 'N/A'
+        },
+        attendance: {
+          records: allRecords,
+          totalAttendance: allRecords.length,
+          lastAttendance: allRecords.length > 0 ? allRecords[0] : null
+        }
+      }
+    });
+  } catch (error) {
+    console.error('POST /search error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch student details', error: error.message });
+  }
+});
+
 // Get student attendance records
 router.get('/attendance', authMiddleware, async (req, res) => {
     try {
